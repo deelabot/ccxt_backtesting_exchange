@@ -1,5 +1,5 @@
 [project]
-name = "ccxt-backtesting-exchange"
+name = "ccxt_backtesting_exchange"
 version = "0.1.0"
 description = "a backtesting simulator based on ccxt"
 authors = [
