@@ -75,4 +75,4 @@ class Backtester(ccxt.Exchange):
         """
         Fetch the balance of the backtesting exchange.
         """
-        return self.balances.to_dict(orient="records")
+        return self.balances.set_index("asset").to_dict(orient="index")
