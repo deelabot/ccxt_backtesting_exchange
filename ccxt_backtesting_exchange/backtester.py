@@ -13,11 +13,11 @@ class Backtester(ccxt.Exchange):
     def __init__(self, balances: Dict, fee=0):
         super().__init__()
 
-        self.balances = pd.DataFrame(columns=["asset", "free", "used", "total"])
-        self.fee = fee
-        self._init_balances(balances)
+        self._balances = pd.DataFrame(columns=["asset", "free", "used", "total"])
+        self._fee = fee
+        self.__init_balances(balances)
 
-    def _init_balances(self, balances: Dict):
+    def __init_balances(self, balances: Dict):
         """
         Initialize the balances of the backtesting exchange.
 
@@ -31,10 +31,10 @@ class Backtester(ccxt.Exchange):
                 for asset, balance in balances.items()
             ]
         )
-        if self.balances.empty:
-            self.balances = updates
+        if self._balances.empty:
+            self._balances = updates
         else:
-            self.balances = pd.concat([self.balances, updates], ignore_index=True)
+            self._balances = pd.concat([self._balances, updates], ignore_index=True)
 
     def _get_asset_balance(self, asset: str, column: str) -> float:
         """
@@ -44,7 +44,7 @@ class Backtester(ccxt.Exchange):
         :param column: The column to retrieve ('free' or 'total').
         :return: The balance of the asset in the specified column.
         """
-        return self.balances.loc[self.balances["asset"] == asset, column].values[0]
+        return self._balances.loc[self._balances["asset"] == asset, column].values[0]
 
     def _update_asset_balance(self, asset: str, column: str, amount: float):
         """
@@ -54,7 +54,7 @@ class Backtester(ccxt.Exchange):
         :param column: The column to update ('free' or 'total').
         :param amount: The amount to add or subtract.
         """
-        self.balances.loc[self.balances["asset"] == asset, column] += amount
+        self._balances.loc[self._balances["asset"] == asset, column] += amount
 
     def deposit(self, asset: str, amount: float, id=None):
         """
@@ -80,4 +80,4 @@ class Backtester(ccxt.Exchange):
         """
         Fetch the balance of the backtesting exchange.
         """
-        return self.balances.set_index("asset").to_dict(orient="index")
+        return self._balances.set_index("asset").to_dict(orient="index")
