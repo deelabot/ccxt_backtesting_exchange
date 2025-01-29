@@ -1,5 +1,4 @@
 import pytest
-import pandas as pd
 from ccxt.base.errors import InsufficientFunds
 from ccxt_backtesting_exchange.backtester import Backtester
 
@@ -41,6 +40,7 @@ def test_withdraw_success(backtester):
 def test_withdraw_insufficient_funds(backtester):
     with pytest.raises(InsufficientFunds):
         backtester.withdraw("SOL", 20.0)
+
 
 def test_deposit_and_withdraw_on_same_asset(backtester):
     backtester.deposit("SOL", 5.0)

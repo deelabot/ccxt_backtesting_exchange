@@ -7,7 +7,8 @@ from ccxt.base.errors import InsufficientFunds
 
 class Backtester(ccxt.Exchange):
     """
-    A backtesting exchange class that inherits from the ccxt.Exchange and implements the ccxt.Exchange unified API.
+    A backtesting exchange class that inherits from the ccxt.Exchange base class
+    and implements the ccxt.Exchange unified API.
     """
 
     def __init__(self, balances: Dict, fee=0):
@@ -27,7 +28,12 @@ class Backtester(ccxt.Exchange):
             return
         updates = pd.DataFrame(
             [
-                {"asset": asset, "free": balance, "used": 0, "total": balance}
+                {
+                    "asset": asset,
+                    "free": balance,
+                    "used": 0,
+                    "total": balance,
+                }
                 for asset, balance in balances.items()
             ]
         )
@@ -38,7 +44,7 @@ class Backtester(ccxt.Exchange):
 
     def _get_asset_balance(self, asset: str, column: str) -> float:
         """
-        Helper method to get the balance of a specific asset and column (e.g., 'free' or 'total').
+        Helper method to get the balance of a specific asset by column (eg. free, used)
 
         :param asset: The asset to query.
         :param column: The column to retrieve ('free' or 'total').
