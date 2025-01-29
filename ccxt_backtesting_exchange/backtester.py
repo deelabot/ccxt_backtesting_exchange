@@ -10,7 +10,7 @@ class Backtester(ccxt.Exchange):
     A backtesting exchange class that inherits from the ccxt.Exchange and implements the ccxt.Exchange unified API.
     """
 
-    def __init__(self, balances: Dict, fee):
+    def __init__(self, balances: Dict, fee=0):
         super().__init__()
 
         self.balances = pd.DataFrame(columns=["asset", "free", "used", "total"])
@@ -23,13 +23,18 @@ class Backtester(ccxt.Exchange):
 
         balances: Dict, example: {"BTC": 1, "ETH": 10}
         """
+        if not balances:
+            return
         updates = pd.DataFrame(
             [
                 {"asset": asset, "free": balance, "used": 0, "total": balance}
                 for asset, balance in balances.items()
             ]
         )
-        self.balances = pd.concat([self.balances, updates], ignore_index=True)
+        if self.balances.empty:
+            self.balances = updates
+        else:
+            self.balances = pd.concat([self.balances, updates], ignore_index=True)
 
     def _get_asset_balance(self, asset: str, column: str) -> float:
         """
