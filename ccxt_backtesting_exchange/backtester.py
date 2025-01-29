@@ -1,8 +1,16 @@
 import pandas as pd
 from typing import Dict
+from enum import Enum
 
 import ccxt
 from ccxt.base.errors import InsufficientFunds
+
+
+class OrderStatus(Enum):
+    FILLED = "filled"
+    PARTIALLY_FILLED = "partially_filled"
+    CANCELED = "canceled"
+    OPEN = "open"
 
 
 class Backtester(ccxt.Exchange):
@@ -15,6 +23,20 @@ class Backtester(ccxt.Exchange):
         super().__init__()
 
         self._balances = pd.DataFrame(columns=["asset", "free", "used", "total"])
+        self._orders = pd.DataFrame(
+            columns=[
+                "createdAt",
+                "symbol",
+                "type",
+                "side",
+                "amount",
+                "price",
+                "status",
+                "updatedAt",
+                "fee",
+                "params",
+            ]
+        )
         self._fee = fee
         self.__init_balances(balances)
 
@@ -41,6 +63,9 @@ class Backtester(ccxt.Exchange):
             self._balances = updates
         else:
             self._balances = pd.concat([self._balances, updates], ignore_index=True)
+
+    def __milliseconds(self):
+        return 0  # todo: implement clock mechanism for backtesting
 
     def _get_asset_balance(self, asset: str, column: str) -> float:
         """
@@ -87,3 +112,18 @@ class Backtester(ccxt.Exchange):
         Fetch the balance of the backtesting exchange.
         """
         return self._balances.set_index("asset").to_dict(orient="index")
+
+    def create_order(
+        self, symbol: str, type: str, side: str, amount: float, price: float
+    ):
+        self._orders.loc[len(self._orders)] = {
+            "createdAt": self.__milliseconds(),
+            "updatedAt": None,
+            "symbol": symbol,
+            "side": side,
+            "type": type,
+            "amount": amount,
+            "price": price,
+            "fee": amount * price * self._fee,
+            "status": OrderStatus.OPEN,
+        }
