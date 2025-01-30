@@ -3,7 +3,7 @@ from typing import Dict
 from enum import Enum
 
 import ccxt
-from ccxt.base.errors import InsufficientFunds
+from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest
 
 
 class OrderStatus(Enum):
@@ -197,16 +197,68 @@ class Backtester(ccxt.Exchange):
         return self._balances.set_index("asset").to_dict(orient="index")
 
     def create_order(
-        self, symbol: str, type: str, side: str, amount: float, price: float
-    ):
+        self, symbol: str, order_type: str, side: str, amount: float, price: float
+    ) -> None:
+        """
+        Creates a new order and adds it to the order book.
+
+        :param symbol: The trading pair (e.g., "BTC/USDT").
+        :param order_type: The type of order (e.g., "limit", "market").
+        :param side: The order side ("buy" or "sell").
+        :param amount: The amount of the base asset to trade.
+        :param price: The price at which to place the order.
+        :raises BadSymbol: If the trading pair is invalid.
+        :raises BadRequest: If the order type, side, amount or price is invalid.
+
+        """
+        # Validate inputs
+        if not isinstance(symbol, str) or "/" not in symbol:
+            raise BadSymbol(
+                "Invalid symbol format. Expected 'BASE/QUOTE' (e.g., 'BTC/USDT')."
+            )
+
+        if order_type not in {"limit", "market"}:
+            raise BadRequest("Invalid order type. Expected 'limit' or 'market'.")
+
+        if side not in {"buy", "sell"}:
+            raise BadRequest("Invalid side. Expected 'buy' or 'sell'.")
+
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            raise BadRequest("Invalid amount. Must be a positive number.")
+
+        if not isinstance(price, (int, float)) or price <= 0:
+            raise BadRequest("Invalid price. Must be a positive number.")
+
+        # Calculate fee
+        fee = amount * price * self._fee
+        base_asset, quote_asset = symbol.split("/")
+
+        # Update pending balance
+        if side == "buy":
+            trade_value = amount * price + fee  # Buyer needs enough quote currency
+            if self._get_asset_balance(quote_asset, "free") < trade_value:
+                raise InsufficientFunds(
+                    f"Insufficient balance: {quote_asset} balance too low."
+                )
+            self._update_asset_balance(quote_asset, "used", trade_value)
+            self._update_asset_balance(quote_asset, "free", -trade_value)
+
+        else:  # side == "sell"
+            if self._get_asset_balance(quote_asset, "free") < amount:
+                raise InsufficientFunds(
+                    f"Insufficient balance: {base_asset} balance too low."
+                )
+            self._update_asset_balance(quote_asset, "used", trade_value)
+            self._update_asset_balance(quote_asset, "free", -trade_value)
+
         self._orders.loc[len(self._orders)] = {
             "createdAt": self.__milliseconds(),
             "updatedAt": None,
             "symbol": symbol,
             "side": side,
-            "type": type,
+            "type": order_type,
             "amount": amount,
             "price": price,
-            "fee": amount * price * self._fee,
+            "fee": fee,
             "status": OrderStatus.OPEN,
         }
