@@ -67,25 +67,108 @@ class Backtester(ccxt.Exchange):
     def __milliseconds(self):
         return 0  # todo: implement clock mechanism for backtesting
 
+    def __get_df_value_by_column(
+        self, df: pd.DataFrame, query_column: str, query_value: any, return_column: str
+    ) -> any:
+        """
+        Generic method to get a value from a specific value from a DataFrame.
+
+        :param df: The DataFrame to query.
+        :param query_column: The column to query for the specific value.
+        :param query_value: The value to search for in the query column.
+        :param return_column: The column from which to retrieve the value.
+
+        :return: The queried value from DataFrame.
+        :raises: ValueError if query not found.
+        """
+        # Check if the query column exists in the DataFrame
+        if query_column not in df.columns:
+            raise ValueError(
+                f"Query column '{query_column}' not found in the DataFrame."
+            )
+
+        # Check if the return column exists in the DataFrame
+        if return_column not in df.columns:
+            raise ValueError(
+                f"Return column '{return_column}' not found in the DataFrame."
+            )
+
+        # Find the rows that match the query_value in the query_column
+        filtered_df = df[df[query_column] == query_value]
+
+        if filtered_df.empty:
+            raise ValueError(
+                f"No rows found where '{query_column}' is '{query_value}'."
+            )
+
+        # Retrieve the value from the return_column
+        value = filtered_df[return_column].values[0]
+
+        return value
+
+    def __update_df_value_by_column(
+        self,
+        df: pd.DataFrame,
+        query_column: str,
+        query_value: any,
+        update_column: str,
+        new_value: any,
+    ) -> None:
+        """
+        Generic method to update a value in a DataFrame.
+
+        :param df: The DataFrame to update.
+        :param query_column: The column where we search for the query_value.
+        :param query_value: The value to search for in the query_column.
+        :param update_column: The column where the value should be updated.
+        :param new_value: The new value to set in the update_column.
+        :raises: ValueError if update column is not found, or if no match is found.
+        """
+        # Check if the query column exists in the DataFrame
+        if query_column not in df.columns:
+            raise ValueError(
+                f"Query column '{query_column}' not found in the DataFrame."
+            )
+
+        # Check if the update column exists in the DataFrame
+        if update_column not in df.columns:
+            raise ValueError(
+                f"Update column '{update_column}' not found in the DataFrame."
+            )
+
+        # Find the index of the row(s) matching the query value
+        mask = df[query_column] == query_value
+
+        if not mask.any():
+            raise ValueError(
+                f"No rows found where '{query_column}' is '{query_value}'."
+            )
+
+        # Update the column value for the matching rows
+        df.loc[mask, update_column] += new_value
+
     def _get_asset_balance(self, asset: str, column: str) -> float:
         """
-        Helper method to get the balance of a specific asset by column (eg. free, used)
+        Helper method to get the balance of a specific asset by column (.g., free).
 
         :param asset: The asset to query.
-        :param column: The column to retrieve ('free' or 'total').
+        :param column: The column to retrieve (e.g., 'free' or 'total').
         :return: The balance of the asset in the specified column.
         """
-        return self._balances.loc[self._balances["asset"] == asset, column].values[0]
+        return self.__get_df_value_by_column(self._balances, "asset", asset, column)
 
-    def _update_asset_balance(self, asset: str, column: str, amount: float):
+    def _update_asset_balance(self, asset: str, column: str, amount: float) -> None:
         """
-        Helper method to update the balance of a specific asset and column.
+        Helper method to update the balance of a specific asset by adding
+        or subtracting an amount.
 
         :param asset: The asset to update.
         :param column: The column to update ('free' or 'total').
         :param amount: The amount to add or subtract.
         """
-        self._balances.loc[self._balances["asset"] == asset, column] += amount
+
+        # Update the balance by adding/subtracting the amount
+        self.__update_df_value_by_column(self._balances, "asset", asset, column, amount)
 
     def deposit(self, asset: str, amount: float, id=None):
         """
