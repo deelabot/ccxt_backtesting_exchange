@@ -27,7 +27,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          poetry run coverage run -m pytest tests/  #
+          poetry run coverage run -m pytest tests/
           poetry run coverage xml
 
       - name: Upload coverage report
@@ -41,4 +41,8 @@ jobs:
         with:
           path: coverage.xml
           minimum_coverage: 75
+          skip_covered: false
+          show_missing: true
+          link_missing_lines: true
+          only_changed_files: true
           repo_token: ${{ secrets.GH_TOKEN }}
