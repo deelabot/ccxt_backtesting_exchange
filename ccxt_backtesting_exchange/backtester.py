@@ -3,7 +3,7 @@ from typing import Dict
 from enum import Enum
 
 import ccxt
-from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest
+from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
 
 
 class OrderStatus(Enum):
@@ -274,7 +274,11 @@ class Backtester(ccxt.Exchange):
         return self.fetch_order(order_id)
 
     def fetch_orders(
-        self, symbol: str, since: int = None, limit: int = None, params: any = None
+        self,
+        symbol: str = None,
+        since: int = None,
+        limit: int = None,
+        params: dict = {},
     ):
         """
         Fetches orders for a given symbol.
@@ -285,12 +289,20 @@ class Backtester(ccxt.Exchange):
         :param params: Additional parameters specific to the exchange API.
         :return: A list of orders.
         """
+        orders = self._orders
         # Filter orders by symbol
-        orders = self._orders[self._orders["symbol"] == symbol]
+        if symbol is not None:
+            orders = orders[orders["symbol"] == symbol]
 
         # Filter orders by since timestamp if provided
         if since is not None:
             orders = orders[orders["timestamp"] >= since]
+
+        if params.get("until", None) is not None:
+            orders = orders[orders["timestamp"] < params["until"]]
+
+        if params.get("id", None) is not None:
+            orders = orders[orders.index == params["id"]]
 
         # Sort orders by timestamp
         orders = orders.sort_values(by="timestamp", ascending=False)
@@ -307,7 +319,7 @@ class Backtester(ccxt.Exchange):
         )
         return orders_list
 
-    def fetch_order(self, id: str, symbol: str = None, params: any = None):
+    def fetch_order(self, id: str, symbol: str = None, params: dict = {}):
         """
         Fetches a single order by its ID.
 
@@ -316,6 +328,10 @@ class Backtester(ccxt.Exchange):
         :param params: Additional parameters specific to the exchange API (optional).
         :return: The order as a dictionary.
         """
-        order = self._orders.loc[id].to_dict()
-        order["id"] = id
-        return order
+        order = self.fetch_orders(symbol=symbol, params={"id": id, **params})
+        if not order or len(order) == 0:
+            raise OrderNotFound(f"Order with id '{id}' not found.")
+        if len(order) > 1:
+            raise OrderNotFound(f"Multiple orders found with id '{id}'.")
+
+        return order[0]
