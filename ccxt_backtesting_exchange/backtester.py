@@ -107,7 +107,7 @@ class Backtester(ccxt.Exchange):
 
         return value
 
-    def __update_df_value_by_column(
+    def __set_df_value_by_column(
         self,
         df: pd.DataFrame,
         query_column: str,
@@ -126,7 +126,8 @@ class Backtester(ccxt.Exchange):
         :raises: ValueError if update column is not found, or if no match is found.
         """
         # Check if the query column exists in the DataFrame
-        if query_column not in df.columns:
+
+        if query_column not in df.columns and query_column != "index":
             raise ValueError(
                 f"Query column '{query_column}' not found in the DataFrame."
             )
@@ -138,7 +139,10 @@ class Backtester(ccxt.Exchange):
             )
 
         # Find the index of the row(s) matching the query value
-        mask = df[query_column] == query_value
+        if query_column == "index":
+            mask = df.index == query_value
+        else:
+            mask = df[query_column] == query_value
 
         if not mask.any():
             raise ValueError(
@@ -146,7 +150,23 @@ class Backtester(ccxt.Exchange):
             )
         new_value = df[update_column].dtype.type(new_value)
         # Update the column value for the matching rows
-        df.loc[mask, update_column] += new_value
+        df.loc[mask, update_column] = new_value
+
+    def __update_df_value_by_column(
+        self,
+        df: pd.DataFrame,
+        query_column: str,
+        query_value: any,
+        update_column: str,
+        delta: any,
+    ) -> None:
+        value = self.__get_df_value_by_column(
+            df, query_column, query_value, update_column
+        )
+        new_value = value + delta
+        self.__set_df_value_by_column(
+            df, query_column, query_value, update_column, new_value
+        )
 
     def _get_asset_balance(self, asset: str, column: str) -> float:
         """
@@ -298,11 +318,16 @@ class Backtester(ccxt.Exchange):
         if since is not None:
             orders = orders[orders["timestamp"] >= since]
 
-        if params.get("until", None) is not None:
-            orders = orders[orders["timestamp"] < params["until"]]
+        for column, value in params.items():
+            if column == "until":
+                orders = orders[orders["timestamp"] < params["until"]]
 
-        if params.get("id", None) is not None:
-            orders = orders[orders.index == params["id"]]
+            elif column == "id":
+                orders = orders[orders.index == params["id"]]
+            elif column in orders.columns:
+                orders = orders[orders[column] == value]
+            else:
+                raise ValueError(f"Invalid column '{column}' in params.")
 
         # Sort orders by timestamp
         orders = orders.sort_values(by="timestamp", ascending=False)
@@ -335,3 +360,18 @@ class Backtester(ccxt.Exchange):
             raise OrderNotFound(f"Multiple orders found with id '{id}'.")
 
         return order[0]
+
+    def fetch_open_orders(self, symbol=None, since=None, limit=None, params: dict = {}):
+        return self.fetch_orders(
+            symbol, since, limit, {"status": OrderStatus.OPEN, **params}
+        )
+
+    def fetch_closed_orders(self, symbol=None, since=None, limit=None, params=...):
+        return self.fetch_orders(
+            symbol, since, limit, {"status": OrderStatus.FILLED, **params}
+        )
+
+    def cancel_order(self, id: str, symbol: str = None, params: dict = {}):
+        self.__set_df_value_by_column(
+            self._orders, "index", id, "status", OrderStatus.CANCELED
+        )
