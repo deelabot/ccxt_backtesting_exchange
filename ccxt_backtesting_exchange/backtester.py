@@ -114,6 +114,7 @@ class Backtester(ccxt.Exchange):
         query_value: any,
         update_column: str,
         new_value: any,
+        limit: int = 1,
     ) -> None:
         """
         Generic method to set a value in a DataFrame.
@@ -147,6 +148,14 @@ class Backtester(ccxt.Exchange):
         if not mask.any():
             raise ValueError(
                 f"No rows found where '{query_column}' is '{query_value}'."
+            )
+            # Check if any rows match the query
+
+        # Check if the number of matching rows exceeds the limit
+        matching_rows = df[mask]
+        if len(matching_rows) > limit:
+            raise ValueError(
+                f"Query matches {len(matching_rows)} rows. LIMIT = {limit}."
             )
         new_value = df[update_column].dtype.type(new_value)
         # Update the column value for the matching rows
