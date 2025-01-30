@@ -12,8 +12,8 @@ def backtester():
 
 @pytest.fixture
 def backtester_with_orders(backtester):
-    backtester.create_order("BTC/USDT", "limit", "buy", 0.001, 50000.0)
     backtester.create_order("SOL/USDT", "limit", "buy", 1.0, 100.0)
+    backtester.create_order("BTC/USDT", "limit", "buy", 0.001, 50000.0)
     backtester.create_order("ETH/USDT", "limit", "buy", 0.1, 3000.0)
     backtester.create_order("SOL/USDT", "limit", "sell", 2.0, 150.0)
     backtester.create_order("SOL/USDT", "limit", "buy", 0.5, 120.0)
@@ -108,3 +108,26 @@ def test_fetch_order_by_id_returns_correct_order(backtester_with_orders):
     assert fetched_order["amount"] == order["amount"]
     assert fetched_order["price"] == order["price"]
     assert fetched_order["fee"] == order["fee"]
+
+
+def test_cancel_order_by_id(backtester_with_orders):
+    order = backtester_with_orders.create_order("SOL/USDT", "limit", "buy", 3.142, 96)
+    backtester_with_orders.cancel_order(order["id"])
+    assert order["status"] == "open"
+    cancelled_order = backtester_with_orders.fetch_order(order["id"])
+    assert cancelled_order["status"] == "canceled"
+
+
+def test_fetch_open_orders(backtester_with_orders):
+    order = backtester_with_orders.create_order("SOL/USDT", "limit", "buy", 3.142, 96)
+    open_orders = backtester_with_orders.fetch_open_orders("SOL/USDT")
+    assert len(open_orders) == 5
+    backtester_with_orders.cancel_order(order["id"])
+
+    open_orders_post_cancel = backtester_with_orders.fetch_open_orders("SOL/USDT")
+    assert len(open_orders_post_cancel) == 4
+
+
+def test_closed_orders_is_empty(backtester):
+    closed_orders = backtester.fetch_closed_orders()
+    assert len(closed_orders) == 0
