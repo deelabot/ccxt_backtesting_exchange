@@ -244,7 +244,7 @@ class Backtester(ccxt.Exchange):
             self._update_asset_balance(quote_asset, "free", -trade_value)
 
         else:  # side == "sell"
-            if self._get_asset_balance(quote_asset, "free") < amount:
+            if self._get_asset_balance(base_asset, "free") < amount:
                 raise InsufficientFunds(
                     f"Insufficient balance: {base_asset} balance too low."
                 )
