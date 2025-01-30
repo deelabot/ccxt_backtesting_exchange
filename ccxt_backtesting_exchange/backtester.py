@@ -116,7 +116,7 @@ class Backtester(ccxt.Exchange):
         new_value: any,
     ) -> None:
         """
-        Generic method to update a value in a DataFrame.
+        Generic method to set a value in a DataFrame.
 
         :param df: The DataFrame to update.
         :param query_column: The column where we search for the query_value.
@@ -160,6 +160,16 @@ class Backtester(ccxt.Exchange):
         update_column: str,
         delta: any,
     ) -> None:
+        """
+        Generic method to add a delta to a value in a DataFrame.
+
+        :param df: The DataFrame to update.
+        :param query_column: The column where we search for the query_value.
+        :param query_value: The value to search for in the query_column.
+        :param update_column: The column where the value should be updated.
+        :param new_value: The new value to set in the update_column.
+        :raises: ValueError if update column is not found, or if no match is found.
+        """
         value = self.__get_df_value_by_column(
             df, query_column, query_value, update_column
         )
@@ -214,6 +224,8 @@ class Backtester(ccxt.Exchange):
     def fetch_balance(self):
         """
         Fetch the balance of the backtesting exchange.
+
+        :return: A dictionary of balances indexed by asset.
         """
         return self._balances.set_index("asset").to_dict(orient="index")
 
@@ -361,7 +373,16 @@ class Backtester(ccxt.Exchange):
 
         return order[0]
 
-    def fetch_open_orders(self, symbol=None, since=None, limit=None, params: dict = {}):
+    def fetch_open_orders(self, symbol: str, since=None, limit=None, params: dict = {}):
+        """
+        Fetches open orders for a given symbol.
+
+        :param symbol: The trading pair symbol (e.g., 'BTC/USDT').
+        :param since: Timestamp in milliseconds to fetch orders since.
+        :param limit: The maximum number of orders to return.
+        :param params: Additional parameters specific to the exchange API.
+        :return: A list of open orders.
+        """
         return self.fetch_orders(
             symbol, since, limit, {"status": OrderStatus.OPEN.value, **params}
         )
@@ -369,11 +390,27 @@ class Backtester(ccxt.Exchange):
     def fetch_closed_orders(
         self, symbol=None, since=None, limit=None, params: dict = {}
     ):
+        """
+        Fetches closed orders for a given symbol.
+
+        :param symbol: The trading pair symbol (e.g., 'BTC/USDT').
+        :param since: Timestamp in milliseconds to fetch orders since.
+        :param limit: The maximum number of orders to return.
+        :param params: Additional parameters specific to the exchange API.
+        :return: A list of closed orders.
+        """
         return self.fetch_orders(
             symbol, since, limit, {"status": OrderStatus.FILLED.value, **params}
         )
 
     def cancel_order(self, id: str, symbol: str = None, params: dict = {}):
+        """
+        Cancels an order by its ID.
+
+        :param id: The ID of the order to cancel.
+        :param symbol: The trading pair symbol (optional).
+        :param params: Additional parameters specific to the exchange API (optional).
+        """
         self.__set_df_value_by_column(
             self._orders, "index", id, "status", OrderStatus.CANCELED.value
         )
