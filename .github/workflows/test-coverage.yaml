@@ -2,7 +2,7 @@ name: Test and Coverage
 
 on:
   pull_request:
-  
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -35,10 +35,10 @@ jobs:
         with:
           name: coverage-report
           path: coverage.xml
-
       - name: Add coverage report to PR
         if: github.event_name == 'pull_request'
-        uses: romeovs/lcov-reporter-action@v0.3.1
+        uses: 5monkeys/cobertura-action@v2
         with:
-          lcov-file: coverage.xml
-          github-token: ${{ secrets.GH_TOKEN }}
+          path: coverage.xml
+          minimum_coverage: 75
+          repo_token: ${{ secrets.GH_TOKEN }}
