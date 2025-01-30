@@ -19,7 +19,7 @@ class Backtester(ccxt.Exchange):
     and implements the ccxt.Exchange unified API.
     """
 
-    def __init__(self, balances: Dict, fee=0):
+    def __init__(self, balances: Dict, fee=0.0):
         super().__init__()
 
         self._balances = pd.DataFrame(columns=["asset", "free", "used", "total"])
@@ -52,9 +52,9 @@ class Backtester(ccxt.Exchange):
             [
                 {
                     "asset": asset,
-                    "free": balance,
-                    "used": 0,
-                    "total": balance,
+                    "free": float(balance),
+                    "used": 0.0,
+                    "total": float(balance),
                 }
                 for asset, balance in balances.items()
             ]
@@ -143,7 +143,7 @@ class Backtester(ccxt.Exchange):
             raise ValueError(
                 f"No rows found where '{query_column}' is '{query_value}'."
             )
-
+        new_value = df[update_column].dtype.type(new_value)
         # Update the column value for the matching rows
         df.loc[mask, update_column] += new_value
 
@@ -198,7 +198,7 @@ class Backtester(ccxt.Exchange):
 
     def create_order(
         self, symbol: str, order_type: str, side: str, amount: float, price: float
-    ) -> None:
+    ) -> any:
         """
         Creates a new order and adds it to the order book.
 
@@ -240,7 +240,7 @@ class Backtester(ccxt.Exchange):
                 raise InsufficientFunds(
                     f"Insufficient balance: {quote_asset} balance too low."
                 )
-            self._update_asset_balance(quote_asset, "used", trade_value)
+            self._update_asset_balance(quote_asset, "used", +trade_value)
             self._update_asset_balance(quote_asset, "free", -trade_value)
 
         else:  # side == "sell"
@@ -248,10 +248,11 @@ class Backtester(ccxt.Exchange):
                 raise InsufficientFunds(
                     f"Insufficient balance: {base_asset} balance too low."
                 )
-            self._update_asset_balance(quote_asset, "used", trade_value)
-            self._update_asset_balance(quote_asset, "free", -trade_value)
+            self._update_asset_balance(base_asset, "used", amount)
+            self._update_asset_balance(base_asset, "free", -amount)
 
-        self._orders.loc[len(self._orders)] = {
+        order_id = len(self._orders)
+        self._orders.loc[order_id] = {
             "createdAt": self.__milliseconds(),
             "updatedAt": None,
             "symbol": symbol,
@@ -261,4 +262,19 @@ class Backtester(ccxt.Exchange):
             "price": price,
             "fee": fee,
             "status": OrderStatus.OPEN,
+        }
+
+        return {
+            "id": order_id,
+            "datetime": self.__milliseconds(),
+            "symbol": symbol,
+            "type": order_type,
+            "side": side,
+            "price": price,
+            "amount": amount,
+            "fee": {
+                "currency": quote_asset,
+                "cost": fee,
+                "rate": self._fee,
+            },
         }
