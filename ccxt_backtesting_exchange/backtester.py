@@ -25,14 +25,15 @@ class Backtester(ccxt.Exchange):
         self._balances = pd.DataFrame(columns=["asset", "free", "used", "total"])
         self._orders = pd.DataFrame(
             columns=[
-                "createdAt",
+                "datetime",
+                "timestamp",
+                "lastTradeTimestamp",
                 "symbol",
                 "type",
                 "side",
-                "amount",
                 "price",
+                "amount",
                 "status",
-                "updatedAt",
                 "fee",
                 "params",
             ]
@@ -230,12 +231,17 @@ class Backtester(ccxt.Exchange):
             raise BadRequest("Invalid price. Must be a positive number.")
 
         # Calculate fee
-        fee = amount * price * self._fee
+        fee_cost = amount * price * self._fee
         base_asset, quote_asset = symbol.split("/")
+        fee = {
+            "currency": quote_asset,
+            "cost": fee_cost,
+            "rate": self._fee,
+        }
 
         # Update pending balance
         if side == "buy":
-            trade_value = amount * price + fee  # Buyer needs enough quote currency
+            trade_value = amount * price + fee_cost  # Buyer needs enough quote currency
             if self._get_asset_balance(quote_asset, "free") < trade_value:
                 raise InsufficientFunds(
                     f"Insufficient balance: {quote_asset} balance too low."
@@ -253,28 +259,63 @@ class Backtester(ccxt.Exchange):
 
         order_id = len(self._orders)
         self._orders.loc[order_id] = {
-            "createdAt": self.__milliseconds(),
-            "updatedAt": None,
+            "datetime": self.__milliseconds(),
+            "timestamp": self.__milliseconds(),
+            "lastTradeTimestamp": None,
             "symbol": symbol,
-            "side": side,
             "type": order_type,
-            "amount": amount,
+            "side": side,
             "price": price,
+            "amount": amount,
             "fee": fee,
             "status": OrderStatus.OPEN,
         }
 
-        return {
-            "id": order_id,
-            "datetime": self.__milliseconds(),
-            "symbol": symbol,
-            "type": order_type,
-            "side": side,
-            "price": price,
-            "amount": amount,
-            "fee": {
-                "currency": quote_asset,
-                "cost": fee,
-                "rate": self._fee,
-            },
-        }
+        return self.fetch_order(order_id)
+
+    def fetch_orders(
+        self, symbol: str, since: int = None, limit: int = None, params: any = None
+    ):
+        """
+        Fetches orders for a given symbol.
+
+        :param symbol: The trading pair symbol (e.g., 'BTC/USDT').
+        :param since: Timestamp in milliseconds to fetch orders since.
+        :param limit: The maximum number of orders to return.
+        :param params: Additional parameters specific to the exchange API.
+        :return: A list of orders.
+        """
+        # Filter orders by symbol
+        orders = self._orders[self._orders["symbol"] == symbol]
+
+        # Filter orders by since timestamp if provided
+        if since is not None:
+            orders = orders[orders["timestamp"] >= since]
+
+        # Sort orders by timestamp
+        orders = orders.sort_values(by="timestamp", ascending=False)
+
+        # Limit the number of orders if limit is provided
+        if limit is not None:
+            orders = orders.head(limit)
+
+        # Convert DataFrame to list of dictionaries
+        orders_list = (
+            orders.reset_index()
+            .rename(columns={"index": "id"})
+            .to_dict(orient="records")
+        )
+        return orders_list
+
+    def fetch_order(self, id: str, symbol: str = None, params: any = None):
+        """
+        Fetches a single order by its ID.
+
+        :param id: The ID of the order.
+        :param symbol: The trading pair symbol (optional).
+        :param params: Additional parameters specific to the exchange API (optional).
+        :return: The order as a dictionary.
+        """
+        order = self._orders.loc[id].to_dict()
+        order["id"] = id
+        return order
