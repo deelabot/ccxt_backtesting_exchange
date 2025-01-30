@@ -288,7 +288,7 @@ class Backtester(ccxt.Exchange):
             "price": price,
             "amount": amount,
             "fee": fee,
-            "status": OrderStatus.OPEN,
+            "status": OrderStatus.OPEN.value,
         }
 
         return self.fetch_order(order_id)
@@ -363,15 +363,17 @@ class Backtester(ccxt.Exchange):
 
     def fetch_open_orders(self, symbol=None, since=None, limit=None, params: dict = {}):
         return self.fetch_orders(
-            symbol, since, limit, {"status": OrderStatus.OPEN, **params}
+            symbol, since, limit, {"status": OrderStatus.OPEN.value, **params}
         )
 
-    def fetch_closed_orders(self, symbol=None, since=None, limit=None, params=...):
+    def fetch_closed_orders(
+        self, symbol=None, since=None, limit=None, params: dict = {}
+    ):
         return self.fetch_orders(
-            symbol, since, limit, {"status": OrderStatus.FILLED, **params}
+            symbol, since, limit, {"status": OrderStatus.FILLED.value, **params}
         )
 
     def cancel_order(self, id: str, symbol: str = None, params: dict = {}):
         self.__set_df_value_by_column(
-            self._orders, "index", id, "status", OrderStatus.CANCELED
+            self._orders, "index", id, "status", OrderStatus.CANCELED.value
         )
