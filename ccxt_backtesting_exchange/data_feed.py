@@ -10,10 +10,15 @@ class DataFeed:
 
         :param file_path: Path to the JSON file containing ohlcv data.
         """
-        with open(file_path, "r") as file:
-            data = json.load(file)
+        try:
+            with open(file_path, "r") as file:
+                data = json.load(file)
 
-        self.__data = np.array(data, dtype=np.float64)
+            self.__data = np.array(data, dtype=np.float64)
+        except FileNotFoundError:
+            # if file does not exist, create an empty array and raise a warning
+            self.__data = np.array([])
+            print(f"Warning: File {file_path} not found. DataFeed is empty.")
 
     def get_data_between_timestamps(
         self, start: int = None, end: int = None, limit: int = None

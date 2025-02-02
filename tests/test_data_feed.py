@@ -8,10 +8,20 @@ def data_feed():
     return DataFeed("./data/test-data.json")
 
 
+@pytest.fixture()
+def empty_data_feed():
+    return DataFeed("./data/empty.json")
+
+
 def test_get_data_between_timestamps(data_feed):
     data = data_feed.get_data_between_timestamps()
     assert len(data) == 60
     assert isinstance(data, np.ndarray)
+
+
+def test_empty_data_feed(empty_data_feed):
+    data = empty_data_feed.get_data_between_timestamps()
+    assert len(data) == 0
 
 
 def test_get_data_between_timestamps_with_valid_range(data_feed):
