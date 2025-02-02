@@ -62,14 +62,14 @@ class Backtester(ccxt.Exchange):
         """
         self._balances.loc[self._balances["asset"] == asset, column] += amount
 
-    def deposit(self, asset: str, amount: float, id=None):
+    def deposit(self, asset: str, amount: float):
         """
         Deposit an asset to the backtesting exchange.
         """
         self._update_asset_balance(asset, "free", amount)
         self._update_asset_balance(asset, "total", amount)
 
-    def withdraw(self, asset: str, amount: float, id=None, params={}):
+    def withdraw(self, asset: str, amount: float, params={}):
         """
         Withdraw an asset from the backtesting exchange.
         """
