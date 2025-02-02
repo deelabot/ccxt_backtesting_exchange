@@ -59,3 +59,41 @@ def test_get_data_between_timestamps_with_end(data_feed):
     data = data_feed.get_data_between_timestamps(end=end)
     assert len(data) == 40
     assert np.all(data[:, 0] < end)
+
+
+def test_get_data_at_timestamp(data_feed):
+    timestamp = 1735686600000
+    data = data_feed._get_data_at_timestamp(timestamp)
+    assert data[0] == timestamp
+
+
+def test_get_data_at_timestamp_with_positive_offset(data_feed):
+    timestamp = 1735686600000
+    offset = 10
+
+    data = data_feed._get_data_at_timestamp(timestamp, offset)
+    expected_timestamp = 1735687200000
+    assert data[0] == expected_timestamp
+
+
+def test_get_data_at_timestamp_with_negative_offset(data_feed):
+    timestamp = 1735687200000
+    offset = -10
+
+    data = data_feed._get_data_at_timestamp(timestamp, offset)
+    expected_timestamp = 1735686600000
+    assert data[0] == expected_timestamp
+
+
+def test_get_data_at_timestamp_with_out_of_bounds_offset(data_feed):
+    timestamp = 1735686600000
+    offset = 100
+    with pytest.raises(IndexError):
+        data_feed._get_data_at_timestamp(timestamp, offset)
+
+
+def test_get_data_at_timestamp_with_empty_data_feed(empty_data_feed):
+    timestamp = 1735686600000
+    data = empty_data_feed._get_data_at_timestamp(timestamp)
+    assert len(data) == 0
+    assert isinstance(data, np.ndarray)

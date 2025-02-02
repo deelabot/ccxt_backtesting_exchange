@@ -46,3 +46,21 @@ class DataFeed:
         if limit is not None:
             filtered_data = filtered_data[:limit]
         return filtered_data
+
+    def _get_data_at_timestamp(self, timestamp: int, offset: int = 0):
+        """
+        Retrieve ohlcvs at a specific timestamp.
+
+        :param timestamp: The timestamp in milliseconds.
+        :param offset: The offset from the timestamp. Positive values looks ahead.
+        :return: A NumPy structured array of the ohlcvs at the specified timestamp.
+        """
+        if self.__data.size == 0:
+            return np.array([])
+
+        timestamps = self.__data[:, 0]
+        index = np.searchsorted(timestamps, timestamp)
+        index += offset
+        if index < 0 or index >= len(self.__data):
+            raise IndexError("Index out of bounds")
+        return self.__data[index]
