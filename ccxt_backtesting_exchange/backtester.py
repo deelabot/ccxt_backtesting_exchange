@@ -423,3 +423,27 @@ class Backtester(ccxt.Exchange):
         self.__set_df_value_by_column(
             self._orders, "index", id, "status", OrderStatus.CANCELED.value
         )
+
+    def load_markets(self, reload=False, params=...):
+        raise NotImplementedError(
+            "Method not implemented. Uncertain about how we go about this"
+        )
+
+    def fetch_markets(self, params=...):
+        raise NotImplementedError(
+            "Method not implemented. Uncertain about how we go about this"
+        )
+
+    def fetch_currencies(self, params=...):
+        raise NotImplementedError(
+            "Method not implemented. Uncertain about how we go about this"
+        )
+
+    def fetch_ticker(self, symbol, params=...):
+        pass
+
+    def fetch_tickers(self, symbols=None, params=...):
+        pass
+
+    def fetch_ohlcv(self, symbol, timeframe="1m", since=None, limit=None, params=...):
+        return super().fetch_ohlcv(symbol, timeframe, since, limit, params)
