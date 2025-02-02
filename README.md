@@ -20,4 +20,10 @@ exchange.load_markets()
 git clone
 cd ccxt_backtesting_exchange
 poetry install
+
+# Run tests
+poetry run pytest
+
+# Run linter
+poetry run flake8
 ```
