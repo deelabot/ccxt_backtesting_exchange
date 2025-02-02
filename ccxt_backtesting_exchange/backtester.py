@@ -69,7 +69,7 @@ class Backtester(ccxt.Exchange):
         self._update_asset_balance(asset, "free", amount)
         self._update_asset_balance(asset, "total", amount)
 
-    def withdraw(self, asset: str, amount: float, id=None):
+    def withdraw(self, asset: str, amount: float, id=None, params={}):
         """
         Withdraw an asset from the backtesting exchange.
         """
@@ -82,7 +82,7 @@ class Backtester(ccxt.Exchange):
         self._update_asset_balance(asset, "free", -amount)
         self._update_asset_balance(asset, "total", -amount)
 
-    def fetch_balance(self):
+    def fetch_balance(self, params={}):
         """
         Fetch the balance of the backtesting exchange.
         """
