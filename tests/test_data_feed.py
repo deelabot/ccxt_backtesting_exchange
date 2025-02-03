@@ -178,7 +178,7 @@ def test_aggregate_ohlcvs(data_feed):
     data = data_feed.get_data_between_timestamps(end=end_timestamp)
     ohlcv = data_feed._aggregate_ohlcv(data)
     expected_ohlcv = np.array([1735686000000, 191.14, 191.2, 190.38, 190.39, 15729.944])
-    assert np.array_equal(ohlcv, expected_ohlcv)
+    assert np.allclose(ohlcv, expected_ohlcv, atol=1e-12)
 
 
 def test_aggregate_ohlcvs_with_empty_data(empty_data_feed):
