@@ -81,7 +81,7 @@ class DataFeed:
                 filtered_data = filtered_data[-limit:]
         return filtered_data
 
-    def _get_data_at_timestamp(self, timestamp: int, offset: int = 0):
+    def get_data_at_timestamp(self, timestamp: int, offset: int = 0):
         """
         Retrieve ohlcvs at a specific timestamp.
 
