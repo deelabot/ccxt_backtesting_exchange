@@ -184,3 +184,37 @@ def test_aggregate_ohlcvs(data_feed):
 def test_aggregate_ohlcvs_with_empty_data(empty_data_feed):
     with pytest.raises(ValueError):
         empty_data_feed._aggregate_ohlcv(empty_data_feed.get_data_between_timestamps())
+
+
+def test_resample_with_empty_data_feed(empty_data_feed):
+    data = empty_data_feed.get_resampled_data("5m")
+    assert len(data) == 0
+
+
+def test_resample_with_invalid_timeframe(data_feed):
+    with pytest.raises(ValueError):
+        data_feed.get_resampled_data("5xyz")
+
+
+def test_resample_data_to_lower_timeframe(data_feed):
+    with pytest.raises(ValueError):
+        data_feed.get_resampled_data("5s")
+
+
+def test_resample_data_with_same_timeframe(data_feed):
+    with pytest.raises(ValueError):
+        data_feed.get_resampled_data("1m")
+
+
+def test_resample_data_to_15m_timeframe(data_feed):
+    resampled_data = data_feed.get_resampled_data("15m")
+    expected_resample = np.array(
+        [
+            [1735686000000, 191.14, 191.2, 190.15, 190.98, 40937.716],
+            [1735686900000, 190.97, 191.11, 190.0, 190.49, 28504.939],
+            [1735687800000, 190.49, 190.49, 189.2, 189.53, 35837.209],
+            [1735688700000, 189.53, 190.04, 189.29, 189.31, 30592.866],
+        ]
+    )
+    assert len(resampled_data) == len(expected_resample)
+    assert np.allclose(resampled_data, expected_resample, atol=1e-12)

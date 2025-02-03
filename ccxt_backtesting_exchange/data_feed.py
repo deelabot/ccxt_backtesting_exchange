@@ -45,7 +45,7 @@ class DataFeed:
                 high_prices.max(),
                 low_prices.min(),
                 close_prices[-1],
-                volumes.sum(),
+                volumes.sum(dtype=np.longdouble),
             ]
         )
 
@@ -98,3 +98,30 @@ class DataFeed:
         if index < 0 or index >= len(self.__data):
             raise IndexError("Index out of bounds")
         return self.__data[index]
+
+    def get_resampled_data(self, timeframe: str):
+        """
+        Resample the data to a new timeframe.
+
+        :param timeframe: The new timeframe to resample to.
+        :return: A NumPy structured array containing the resampled ohlcvs.
+        """
+        interval = timeframe_to_timedelta(timeframe)
+        if interval <= self.__interval:
+            raise ValueError("New timeframe must be larger than current timeframe")
+
+        if self.__data.size == 0:
+            return np.array([])
+
+        timestamps = self.__data[:, 0]
+        resample_milliseconds = interval.total_seconds() * 1000
+
+        new_timestamps = timestamps[np.where(timestamps % resample_milliseconds == 0)]
+        return np.array(
+            [
+                self._aggregate_ohlcv(self.get_data_between_timestamps(start, end))
+                for (start, end) in zip(
+                    new_timestamps, np.append(new_timestamps[1:], None)
+                )
+            ]
+        )
