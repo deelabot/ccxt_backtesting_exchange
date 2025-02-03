@@ -113,15 +113,28 @@ class DataFeed:
         if self.__data.size == 0:
             return np.array([])
 
+        resample_milliseconds = int(interval.total_seconds() * 1000)
         timestamps = self.__data[:, 0]
-        resample_milliseconds = interval.total_seconds() * 1000
 
-        new_timestamps = timestamps[np.where(timestamps % resample_milliseconds == 0)]
-        return np.array(
-            [
-                self._aggregate_ohlcv(self.get_data_between_timestamps(start, end))
-                for (start, end) in zip(
-                    new_timestamps, np.append(new_timestamps[1:], None)
-                )
-            ]
+        # Compute the bins: round timestamps down to the nearest interval
+        bin_edges = (timestamps // resample_milliseconds) * resample_milliseconds
+        unique_bins, bin_indices = np.unique(bin_edges, return_inverse=True)
+
+        # Preallocate array for performance
+        aggregated_data = np.zeros(
+            (len(unique_bins), self.__data.shape[1]), dtype=np.float64
         )
+
+        for i, bin_val in enumerate(unique_bins):
+            mask = bin_edges == bin_val
+            grouped_data = self.__data[mask]
+
+            aggregated_data[i, 0] = bin_val
+            aggregated_data[i, 1] = grouped_data[0, 1]  # first open, as open
+            aggregated_data[i, 2] = np.max(grouped_data[:, 2])
+            aggregated_data[i, 3] = np.min(grouped_data[:, 3])
+            aggregated_data[i, 4] = grouped_data[-1, 4]  # last close, as close
+
+            aggregated_data[i, 5] = grouped_data[:, 5].sum()
+
+        return aggregated_data
