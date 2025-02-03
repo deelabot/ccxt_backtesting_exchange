@@ -38,7 +38,7 @@ def assert_timestamps_in_range(
     assert np.all(returned_timestamps <= last_expected_timestamp)
 
 
-def test_get_data_between_timestamps(data_feed):
+def test_get_data_without_limit_returns_all(data_feed):
     data = data_feed.get_data_between_timestamps()
     first_expected_timestamp = 1735686000000
     last_expected_timestamp = 1735689540000
@@ -46,12 +46,20 @@ def test_get_data_between_timestamps(data_feed):
     assert_timestamps_in_range(data, first_expected_timestamp, last_expected_timestamp)
 
 
-def test_empty_data_feed(empty_data_feed):
+def test_get_data_with_limit_returns_most_recent(data_feed):
+    data = data_feed.get_data_between_timestamps(limit=10)
+    first_expected_timestamp = 1735689000000
+    last_expected_timestamp = 1735689540000
+    assert len(data) == 10
+    assert_timestamps_in_range(data, first_expected_timestamp, last_expected_timestamp)
+
+
+def test_empty_data_feed_returns_empty(empty_data_feed):
     data = empty_data_feed.get_data_between_timestamps()
     assert len(data) == 0
 
 
-def test_get_data_between_timestamps_with_valid_range(data_feed):
+def test_get_data_between_timestamps_with_valid_range_returns_all(data_feed):
     start = 1735686600000
     end = 1735688400000
     data = data_feed.get_data_between_timestamps(start=start, end=end)
@@ -64,7 +72,7 @@ def test_get_data_between_timestamps_with_valid_range(data_feed):
     )
 
 
-def test_get_data_between_timestamps_with_limit(data_feed):
+def test_get_data_between_timestamps_with_limit_returns_most_recent(data_feed):
     start = 1735686600000
     end = 1735688400000
     limit = 10
@@ -80,7 +88,7 @@ def test_get_data_between_timestamps_with_limit(data_feed):
     )
 
 
-def test_get_data_from_timestamp_with_limit(data_feed):
+def test_get_data_from_timestamp_with_limit_returns_earliest(data_feed):
     start = 1735686600000
     limit = 10
     data = data_feed.get_data_between_timestamps(start=start, limit=limit)
@@ -95,7 +103,7 @@ def test_get_data_from_timestamp_with_limit(data_feed):
     )
 
 
-def test_get_data_upto_timestamp_with_limit(data_feed):
+def test_get_data_upto_timestamp_with_limit_returns_most_recent(data_feed):
     end = 1735688400000
     limit = 10
     data = data_feed.get_data_between_timestamps(end=end, limit=limit)
@@ -118,7 +126,7 @@ def test_get_data_between_timestamps_with_start(data_feed):
     assert_timestamps_in_range(data, start, last_expected_timestamp)
 
 
-def test_get_data_between_timestamps_with_end(data_feed):
+def test_get_data_upto_timestamps_with_end(data_feed):
     end = 1735688400000
     data = data_feed.get_data_between_timestamps(end=end)
     first_expected_timestamp = 1735686000000
