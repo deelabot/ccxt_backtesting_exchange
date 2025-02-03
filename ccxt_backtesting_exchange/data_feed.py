@@ -13,6 +13,7 @@ class DataFeed:
         :param file_path: Path to the JSON file containing ohlcv data.
         """
         self.__interval = timeframe_to_timedelta(timeframe)
+        self.__RESAMPLE_CACHE = {}
         try:
             with open(file_path, "r") as file:
                 data = json.load(file)
@@ -107,6 +108,10 @@ class DataFeed:
         :return: A NumPy structured array containing the resampled ohlcvs.
         """
         interval = timeframe_to_timedelta(timeframe)
+
+        if interval in self.__RESAMPLE_CACHE:
+            return self.__RESAMPLE_CACHE[interval]
+
         if interval <= self.__interval:
             raise ValueError("New timeframe must be larger than current timeframe")
 
@@ -137,4 +142,5 @@ class DataFeed:
 
             aggregated_data[i, 5] = grouped_data[:, 5].sum()
 
+        self.__RESAMPLE_CACHE[interval] = aggregated_data
         return aggregated_data
