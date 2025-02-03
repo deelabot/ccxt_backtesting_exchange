@@ -1,15 +1,18 @@
 import numpy as np
 import json
 
+from .utils import timeframe_to_timedelta
+
 
 class DataFeed:
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, timeframe: str = "1m"):
         """
         Initialize the DataFeed by loading ohlcv data from a JSON file.
 
         :param file_path: Path to the JSON file containing ohlcv data.
         """
+        self.__interval = timeframe_to_timedelta(timeframe)
         try:
             with open(file_path, "r") as file:
                 data = json.load(file)
@@ -19,6 +22,32 @@ class DataFeed:
             # if file does not exist, create an empty array and raise a warning
             self.__data = np.array([])
             print(f"Warning: File {file_path} not found. DataFeed is empty.")
+
+    def _aggregate_ohlcv(self, ohlcv: np.ndarray):
+        """
+        Aggregate a set of ohlcvs into a single ohlcv.
+
+        :param ohlcv: A NumPy structured array containing ohlcvs.
+        :return: A single ohlcv aggregated from the input ohlcvs.
+        """
+        if ohlcv.size == 0:
+            raise ValueError("Input ohlcv array is empty")
+
+        timestamps, open_prices, high_prices, low_prices, close_prices, volumes = (
+            ohlcv.T
+        )
+
+        # Return the aggregated ohlcv
+        return np.array(
+            [
+                timestamps[0],
+                open_prices[0],
+                high_prices.max(),
+                low_prices.min(),
+                close_prices[-1],
+                volumes.sum(),
+            ]
+        )
 
     def get_data_between_timestamps(
         self, start: int = None, end: int = None, limit: int = None
