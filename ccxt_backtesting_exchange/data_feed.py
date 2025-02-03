@@ -44,7 +44,11 @@ class DataFeed:
         filtered_data = self.__data[mask]
 
         if limit is not None:
-            filtered_data = filtered_data[:limit]
+            if end is not None:
+                # if there's an end, limit the data from the end
+                filtered_data = filtered_data[-limit:]
+            else:
+                filtered_data = filtered_data[:limit]
         return filtered_data
 
     def _get_data_at_timestamp(self, timestamp: int, offset: int = 0):
