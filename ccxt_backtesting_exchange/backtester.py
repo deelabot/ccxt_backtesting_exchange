@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from typing import Dict
 from enum import Enum
 
@@ -22,7 +23,11 @@ class Backtester(ccxt.Exchange):
     def __init__(self, balances: Dict, fee=0.0):
         super().__init__()
 
-        self._balances = pd.DataFrame(columns=["asset", "free", "used", "total"])
+        self._balances = pd.DataFrame(
+            columns=["asset", "free", "used", "total"]
+        ).astype(
+            {"asset": str, "free": np.float32, "used": np.float32, "total": np.float32}
+        )
         self._orders = pd.DataFrame(
             columns=[
                 "datetime",
@@ -53,9 +58,9 @@ class Backtester(ccxt.Exchange):
             [
                 {
                     "asset": asset,
-                    "free": float(balance),
+                    "free": balance,
                     "used": 0.0,
-                    "total": float(balance),
+                    "total": balance,
                 }
                 for asset, balance in balances.items()
             ]
