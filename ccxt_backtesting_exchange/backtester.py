@@ -338,7 +338,6 @@ class Backtester(ccxt.Exchange):
                     )
                 else:
                     order_type = "market"
-                    price = open
             else:  # side == "sell"
                 if price < open:
                     if params.get("postOnly", False):
@@ -347,7 +346,8 @@ class Backtester(ccxt.Exchange):
                         )
                     else:
                         order_type = "market"
-                        price = open
+            if order_type == "market":
+                price = open
 
         # Calculate fee
         fee_cost = amount * price * self._fee
