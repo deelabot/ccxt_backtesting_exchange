@@ -368,7 +368,7 @@ class Backtester(ccxt.Exchange):
             self._update_asset_balance(quote_asset, "used", +trade_value)
             self._update_asset_balance(quote_asset, "free", -trade_value)
 
-        else:  # side == "sell"
+        elif side == "sell":
             if self._get_asset_balance(base_asset, "free") < amount:
                 raise InsufficientFunds(
                     f"Insufficient balance: {base_asset} balance too low."
@@ -507,7 +507,7 @@ class Backtester(ccxt.Exchange):
             self._update_asset_balance(quote_asset, "used", -trade_value)
             self._update_asset_balance(quote_asset, "free", +trade_value)
 
-        else:
+        elif order["side"] == "sell":
             self._update_asset_balance(base_asset, "used", -order["amount"])
             self._update_asset_balance(base_asset, "free", +order["amount"])
 
