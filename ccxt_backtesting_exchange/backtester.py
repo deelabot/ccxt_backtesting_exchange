@@ -392,7 +392,7 @@ class Backtester(ccxt.Exchange):
             elif column in orders.columns:
                 orders = orders[orders[column] == value]
             else:
-                raise ValueError(f"Invalid column '{column}' in params.")
+                raise BadRequest(f"Invalid column '{column}' in params.")
 
         # Sort orders by timestamp
         orders = orders.sort_values(by="timestamp", ascending=False)
