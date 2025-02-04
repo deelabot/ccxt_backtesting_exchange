@@ -521,5 +521,10 @@ class Backtester(ccxt.Exchange):
             symbols = list(self._data_feeds.keys())
         return [self.fetch_ticker(symbol) for symbol in symbols]
 
-    def fetch_ohlcv(self, symbol, timeframe="1m", since=None, limit=None, params=...):
-        pass
+    def fetch_ohlcv(self, symbol, timeframe="1m", since=None, limit=None, params={}):
+        if symbol not in self._data_feeds:
+            raise BadSymbol(f"No data feed found for '{symbol}'.")
+        data_feed: DataFeed = self._data_feeds[symbol]
+        return data_feed.get_data_between_timestamps(
+            start=since, end=params.get("until", None), limit=limit, timeframe=timeframe
+        )
