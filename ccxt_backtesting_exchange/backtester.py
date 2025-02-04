@@ -2,7 +2,13 @@ from typing import Dict
 from enum import Enum
 
 import ccxt
-from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
+from ccxt.base.errors import (
+    InsufficientFunds,
+    BadSymbol,
+    BadRequest,
+    OrderNotFound,
+    OrderImmediatelyFillable,
+)
 import pandas as pd
 import numpy as np
 
@@ -283,7 +289,13 @@ class Backtester(ccxt.Exchange):
         return self._balances.set_index("asset").to_dict(orient="index")
 
     def create_order(
-        self, symbol: str, order_type: str, side: str, amount: float, price: float
+        self,
+        symbol: str,
+        order_type: str,
+        side: str,
+        amount: float,
+        price: float,
+        params: dict = {},
     ) -> any:
         """
         Creates a new order and adds it to the order book.
@@ -314,6 +326,28 @@ class Backtester(ccxt.Exchange):
 
         if not isinstance(price, (int, float)) or price <= 0:
             raise BadRequest("Invalid price. Must be a positive number.")
+        datafeed = self._data_feeds.get(symbol, None)
+        if datafeed and order_type == "limit":
+            [timestamp, open, high, low, close, volume] = self._data_feeds[
+                symbol
+            ].get_data_at_timestamp(self.milliseconds())
+            if side == "buy" and price > open:
+                if params.get("postOnly", False):
+                    raise OrderImmediatelyFillable(
+                        "The order would be filled immediately."
+                    )
+                else:
+                    order_type = "market"
+                    price = open
+            else:  # side == "sell"
+                if price < open:
+                    if params.get("postOnly", False):
+                        raise OrderImmediatelyFillable(
+                            "The order would be filled immediately."
+                        )
+                    else:
+                        order_type = "market"
+                        price = open
 
         # Calculate fee
         fee_cost = amount * price * self._fee
