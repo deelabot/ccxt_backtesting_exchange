@@ -73,10 +73,7 @@ class Backtester(ccxt.Exchange):
                 for asset, balance in balances.items()
             ]
         )
-        if self._balances.empty:
-            self._balances = updates
-        else:
-            self._balances = pd.concat([self._balances, updates], ignore_index=True)
+        self._balances = updates
 
     def __get_df_value_by_column(
         self, df: pd.DataFrame, query_column: str, query_value: any, return_column: str
