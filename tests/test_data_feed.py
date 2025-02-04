@@ -202,8 +202,8 @@ def test_resample_data_to_lower_timeframe(data_feed):
 
 
 def test_resample_data_with_same_timeframe(data_feed):
-    with pytest.raises(ValueError):
-        data_feed.get_resampled_data("1m")
+    resampled_data = data_feed.get_resampled_data("1m")
+    assert np.array_equal(resampled_data, data_feed.get_data_between_timestamps())
 
 
 def test_resample_data_to_15m_timeframe(data_feed):

@@ -112,8 +112,11 @@ class DataFeed:
         if interval in self.__RESAMPLE_CACHE:
             return self.__RESAMPLE_CACHE[interval]
 
-        if interval <= self.__interval:
+        if interval < self.__interval:
             raise ValueError("New timeframe must be larger than current timeframe")
+
+        elif interval == self.__interval:
+            return self.__data
 
         if self.__data.size == 0:
             return np.array([])
