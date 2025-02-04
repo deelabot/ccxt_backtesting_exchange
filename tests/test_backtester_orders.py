@@ -1,7 +1,7 @@
 import pytest
 
 
-from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest
+from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
 
 
 @pytest.fixture
@@ -154,6 +154,11 @@ def test_fetch_order_by_id_returns_correct_order(backtester_with_orders):
     assert fetched_order["amount"] == order["amount"]
     assert fetched_order["price"] == order["price"]
     assert fetched_order["fee"] == order["fee"]
+
+
+def test_fetch_order_with_invalid_id_raises_error(backtester_with_orders):
+    with pytest.raises(OrderNotFound):
+        backtester_with_orders.fetch_order("invalid_id")
 
 
 def test_cancel_order_by_id(backtester_with_orders):
