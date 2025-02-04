@@ -20,7 +20,7 @@ class Clock:
         self.interval = interval
         self.current_time = start_time
 
-    def advance(self) -> bool:
+    def tick(self) -> bool:
         """
         Advance the clock by the time step.
 

@@ -22,15 +22,15 @@ def test_that_clock_starts_at_beginning(clock):
 
 def test_that_clock_advances_with_correct_intervals(clock):
 
-    clock.advance()
+    clock.tick()
     assert clock.get_current_time() == datetime.datetime(
         2025, 1, 1, 4, 0, 0, tzinfo=datetime.timezone.utc
     )
     assert clock.epoch() == 1735704000000
     assert clock.datetime() == "2025-01-01 04:00:00"
 
-    clock.advance()
-    clock.advance()
+    clock.tick()
+    clock.tick()
     assert clock.get_current_time() == datetime.datetime(
         2025, 1, 1, 12, 0, 0, tzinfo=datetime.timezone.utc
     )
@@ -40,17 +40,17 @@ def test_that_clock_advances_with_correct_intervals(clock):
 
 def test_that_clock_advances_until_end(clock):
     for _ in range(5):
-        assert clock.advance()
+        assert clock.tick()
 
     assert clock.get_current_time() == datetime.datetime(
         2025, 1, 1, 20, 0, 0, tzinfo=datetime.timezone.utc
     )
-    assert not clock.advance()  # Clock should not advance beyond the end time
+    assert not clock.tick()  # Clock should not advance beyond the end time
 
 
 def test_reset_restarts_clock(clock):
 
-    clock.advance()
+    clock.tick()
     assert clock.get_current_time() == datetime.datetime(
         2025, 1, 1, 4, 0, 0, tzinfo=datetime.timezone.utc
     )
