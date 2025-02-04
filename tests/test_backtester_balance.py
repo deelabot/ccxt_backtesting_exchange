@@ -1,5 +1,5 @@
 import pytest
-from ccxt.base.errors import InsufficientFunds
+from ccxt.base.errors import InsufficientFunds, OrderNotFound, BadRequest
 
 from ccxt_backtesting_exchange.backtester import Backtester
 
@@ -104,3 +104,49 @@ def test_create_sell_order_properly_affects_balances(backtester):
 
     assert order["id"] == 0
     assert order["type"] == "market"
+
+
+def test_cancel_one_order_restores_balances(backtester):
+    order = backtester.create_order("SOL/USDT", "limit", "buy", 1.0, 200.0)
+    backtester.cancel_order(order["id"])
+    balance = backtester.fetch_balance()
+    expected_balance = {
+        "BTC": {"free": 1.0, "used": 0, "total": 1.0},
+        "ETH": {"free": 5.0, "used": 0, "total": 5.0},
+        "SOL": {"free": 10.0, "used": 0, "total": 10.0},
+        "USDT": {"free": 10000.0, "used": 0, "total": 10000.0},
+    }
+    assert balance == expected_balance
+
+
+def test_cancel_some_orders_affects_balances_correctly(backtester):
+    backtester.create_order("SOL/USDT", "limit", "buy", 1.0, 200.0)
+    backtester.create_order("ETH/USDT", "limit", "buy", 1.0, 2000.0)
+    backtester.create_order("ETH/USDT", "limit", "sell", 1.0, 3500.0)
+    backtester.create_order("SOL/USDT", "limit", "buy", 1.0, 150.0)
+    backtester.create_order("SOL/USDT", "limit", "sell", 1.0, 350.0)
+    buy_order = backtester.create_order("SOL/USDT", "limit", "buy", 1.0, 100.0)
+    sell_order = backtester.create_order("SOL/USDT", "limit", "sell", 0.5, 300.0)
+
+    backtester.cancel_order(buy_order["id"])
+    backtester.cancel_order(sell_order["id"])
+    balance = backtester.fetch_balance()
+    expected_balance = {
+        "BTC": {"free": 1.0, "used": 0, "total": 1.0},
+        "ETH": {"free": 4.0, "used": 1.0, "total": 5.0},
+        "SOL": {"free": 9.0, "used": 1.0, "total": 10.0},
+        "USDT": {"free": 7647.65, "used": 2352.35, "total": 10000.0},
+    }
+    assert balance == expected_balance
+
+
+def test_attempt_cancelling_nonexistent_order_raises_exception(backtester):
+    with pytest.raises(OrderNotFound):
+        backtester.cancel_order(1000)
+
+
+def test_attempt_cancelling_already_cancelled_order_raises_exception(backtester):
+    order = backtester.create_order("SOL/USDT", "limit", "buy", 1.0, 200.0)
+    backtester.cancel_order(order["id"])
+    with pytest.raises(BadRequest):
+        backtester.cancel_order(order["id"])

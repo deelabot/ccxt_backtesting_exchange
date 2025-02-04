@@ -464,6 +464,19 @@ class Backtester(ccxt.Exchange):
         :param symbol: The trading pair symbol (optional).
         :param params: Additional parameters specific to the exchange API (optional).
         """
+        order = self.fetch_order(id, symbol, params)
+        base_asset, quote_asset = order["symbol"].split("/")
+        if order["status"] != OrderStatus.OPEN.value:
+            raise BadRequest("Order is already closed or canceled.")
+        if order["side"] == "buy":
+            trade_value = order["amount"] * order["price"] + order["fee"]["cost"]
+            self._update_asset_balance(quote_asset, "used", -trade_value)
+            self._update_asset_balance(quote_asset, "free", +trade_value)
+
+        else:
+            self._update_asset_balance(base_asset, "used", -order["amount"])
+            self._update_asset_balance(base_asset, "free", +order["amount"])
+
         self.__set_df_value_by_column(
             self._orders, "index", id, "status", OrderStatus.CANCELED.value
         )
