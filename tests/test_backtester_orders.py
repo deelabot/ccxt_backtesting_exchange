@@ -1,7 +1,13 @@
 import pytest
 
 
-from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
+from ccxt.base.errors import (
+    InsufficientFunds,
+    BadSymbol,
+    BadRequest,
+    OrderNotFound,
+    OrderImmediatelyFillable,
+)
 
 
 @pytest.fixture
@@ -94,6 +100,66 @@ def test_create_order_uses_correct_time(backtester):
     assert order1["datetime"] == "2024-12-31 23:30:00"
     assert order2["timestamp"] == 1735687860000
     assert order2["datetime"] == "2024-12-31 23:31:00"
+
+
+def test_create_limit_postonly_buy_order_above_market_price_raises_error(
+    backtester_with_data_feed,
+):
+    with pytest.raises(OrderImmediatelyFillable):
+        backtester_with_data_feed.create_order(
+            "SOL/USDT", "limit", "buy", 1, 1000.0, params={"postOnly": True}
+        )
+
+
+def test_create_limit_postonly_buy_order_below_market_price_works(
+    backtester_with_data_feed,
+):
+    order = backtester_with_data_feed.create_order(
+        "SOL/USDT", "limit", "buy", 1, price=100.0, params={"postOnly": True}
+    )
+    assert order["price"] == 100.0
+    assert order["status"] == "open"
+    assert order["type"] == "limit"
+
+
+def test_create_limit_buy_order_above_market_price_adjusts(backtester_with_data_feed):
+    order = backtester_with_data_feed.create_order(
+        "SOL/USDT", "limit", "buy", 1, 1000.0
+    )
+    assert order["price"] == 190.49
+    assert order["status"] == "open"
+    assert order["type"] == "market"
+
+
+def test_create_limit_postonly_sell_order_below_market_price_raises_error(
+    backtester_with_data_feed,
+):
+    with pytest.raises(OrderImmediatelyFillable):
+        backtester_with_data_feed.create_order(
+            "SOL/USDT", "limit", "sell", 1, 100.0, params={"postOnly": True}
+        )
+
+
+def test_create_limit_postonly_sell_order_above_market_price_works(
+    backtester_with_data_feed,
+):
+    order = backtester_with_data_feed.create_order(
+        "SOL/USDT", "limit", "sell", 1, 400.0, params={"postOnly": True}
+    )
+    assert order["price"] == 400.0
+    assert order["status"] == "open"
+    assert order["type"] == "limit"
+
+
+def test_create_limit_sell_order_below_market_price_adjusts(
+    backtester_with_data_feed,
+):
+    order = backtester_with_data_feed.create_order(
+        "SOL/USDT", "limit", "sell", 1, 100.0
+    )
+    assert order["price"] == 190.49
+    assert order["status"] == "open"
+    assert order["type"] == "market"
 
 
 def test_cancel_order_uses_correct_time(backtester):
