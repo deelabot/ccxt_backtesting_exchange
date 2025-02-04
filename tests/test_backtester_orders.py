@@ -7,15 +7,25 @@ from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest
 @pytest.fixture
 def backtester_with_orders(backtester):
     backtester.create_order("SOL/USDT", "limit", "buy", 1.0, 100.0)
+    backtester.tick()
     backtester.create_order("BTC/USDT", "limit", "buy", 0.001, 50000.0)
+    backtester.tick()
     backtester.create_order("ETH/USDT", "limit", "buy", 0.1, 3000.0)
+    backtester.tick()
     backtester.create_order("SOL/USDT", "limit", "sell", 2.0, 150.0)
+    backtester.tick()
     backtester.create_order("SOL/USDT", "limit", "buy", 0.5, 120.0)
+    backtester.tick()
     backtester.create_order("SOL/USDT", "limit", "sell", 0.5, 140.0)
+    backtester.tick()
     backtester.create_order("ETH/USDT", "limit", "sell", 1.0, 4000.0)
+    backtester.tick()
     backtester.create_order("BTC/USDT", "limit", "sell", 0.1, 60000.0)
+    backtester.tick()
     backtester.create_order("BTC/USDT", "limit", "buy", 0.002, 55000.0)
+    backtester.tick()
     backtester.create_order("ETH/USDT", "limit", "buy", 0.1, 2000.0)
+    backtester.tick()
     return backtester
 
 
@@ -105,6 +115,27 @@ def test_fetch_orders_without_symbol(backtester_with_orders):
 def test_fetch_orders_without_limit(backtester_with_orders):
     orders = backtester_with_orders.fetch_orders("SOL/USDT")
     assert len(orders) == 4
+
+
+def test_fetch_orders_with_start_timestamp(backtester_with_orders):
+    open_orders = backtester_with_orders.fetch_open_orders(
+        "SOL/USDT", since=1735688100000
+    )
+    assert len(open_orders) == 1
+
+
+def test_fetch_orders_upto_timestamp(backtester_with_orders):
+    open_orders = backtester_with_orders.fetch_open_orders(
+        "SOL/USDT", params=dict(until=1735688100000)
+    )
+    assert len(open_orders) == 3
+
+
+def test_fetch_order_with_invalid_params(backtester_with_orders):
+    with pytest.raises(BadRequest):
+        backtester_with_orders.fetch_open_orders(
+            "SOL/USDT", params=dict(invalid=1735688100000)
+        )
 
 
 def test_fetch_orders_with_limit(backtester_with_orders):
