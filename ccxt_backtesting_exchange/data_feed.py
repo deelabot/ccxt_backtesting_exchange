@@ -82,7 +82,7 @@ class DataFeed:
         if end is not None:
             mask &= timestamps < end
 
-        filtered_data = self.__data[mask]
+        filtered_data = data[mask]
 
         if limit is not None:
             if end is None and start is not None:
