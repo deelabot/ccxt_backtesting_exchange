@@ -20,7 +20,7 @@ class Clock:
         self.interval = interval
         self.current_time = start_time
 
-    def advance(self) -> bool:
+    def tick(self) -> bool:
         """
         Advance the clock by the time step.
 
@@ -36,6 +36,22 @@ class Clock:
         :return: The current time as a datetime object.
         """
         return self.current_time
+
+    def epoch(self) -> int:
+        """
+        Get the epoch time of the clock in milliseconds.
+
+        :return: The current time in milliseconds.
+        """
+        return int(self.current_time.timestamp() * 1000)
+
+    def datetime(self) -> str:
+        """
+        Get the current time of the clock as a string.
+
+        :return: The current time as a string.
+        """
+        return self.current_time.strftime("%Y-%m-%d %H:%M:%S")
 
     def reset(self):
         """

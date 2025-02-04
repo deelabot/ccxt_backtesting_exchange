@@ -13,6 +13,7 @@ class DataFeed:
         :param file_path: Path to the JSON file containing ohlcv data.
         """
         self.__interval = timeframe_to_timedelta(timeframe)
+        self.__RESAMPLE_CACHE = {}
         try:
             with open(file_path, "r") as file:
                 data = json.load(file)
@@ -50,7 +51,11 @@ class DataFeed:
         )
 
     def get_data_between_timestamps(
-        self, start: int = None, end: int = None, limit: int = None
+        self,
+        start: int = None,
+        end: int = None,
+        limit: int = None,
+        timeframe: str = None,
     ):
         """
         Retrieve raw ohlcvs between two timestamps.
@@ -58,12 +63,17 @@ class DataFeed:
         :param start: Start timestamp in milliseconds (inclusive).
         :param end: End timestamp in milliseconds (exclusive).
         :param limit: Maximum number of records to return. Return all records if None.
+        :param timeframe: Resample the data to a new timeframe before returning.
         :return: A NumPy structured array containing the filtered ohlcvs.
         """
         if self.__data.size == 0:
             return np.array([])
+        if timeframe is not None:
+            data = self.get_resampled_data(timeframe)
+        else:
+            data = self.__data
 
-        timestamps = self.__data[:, 0]  # Extract timestamps from first column
+        timestamps = data[:, 0]  # Extract timestamps from first column
         if start is None:
             mask = timestamps >= timestamps[0]
         else:
@@ -72,7 +82,7 @@ class DataFeed:
         if end is not None:
             mask &= timestamps < end
 
-        filtered_data = self.__data[mask]
+        filtered_data = data[mask]
 
         if limit is not None:
             if end is None and start is not None:
@@ -107,8 +117,15 @@ class DataFeed:
         :return: A NumPy structured array containing the resampled ohlcvs.
         """
         interval = timeframe_to_timedelta(timeframe)
-        if interval <= self.__interval:
+
+        if interval in self.__RESAMPLE_CACHE:
+            return self.__RESAMPLE_CACHE[interval]
+
+        if interval < self.__interval:
             raise ValueError("New timeframe must be larger than current timeframe")
+
+        elif interval == self.__interval:
+            return self.__data
 
         if self.__data.size == 0:
             return np.array([])
@@ -137,4 +154,5 @@ class DataFeed:
 
             aggregated_data[i, 5] = grouped_data[:, 5].sum()
 
+        self.__RESAMPLE_CACHE[interval] = aggregated_data
         return aggregated_data
