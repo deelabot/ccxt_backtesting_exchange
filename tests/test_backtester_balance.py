@@ -1,6 +1,13 @@
 import pytest
 from ccxt.base.errors import InsufficientFunds
 
+from ccxt_backtesting_exchange.backtester import Backtester
+
+
+@pytest.fixture
+def backtester_with_empty_balances(clock):
+    return Backtester(balances={}, clock=clock, fee=0.001)
+
 
 def test_initial_balances(backtester):
     balance = backtester.fetch_balance()
@@ -10,6 +17,12 @@ def test_initial_balances(backtester):
         "SOL": {"free": 10.0, "used": 0, "total": 10.0},
         "USDT": {"free": 10000.0, "used": 0, "total": 10000.0},
     }
+    assert balance == expected_balance
+
+
+def test_initial_balances_empty(backtester_with_empty_balances):
+    balance = backtester_with_empty_balances.fetch_balance()
+    expected_balance = {}
     assert balance == expected_balance
 
 
