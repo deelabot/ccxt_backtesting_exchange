@@ -489,7 +489,7 @@ class Backtester(ccxt.Exchange):
     def fetch_ticker(self, symbol: str, params={}):
 
         if symbol not in self._data_feeds:
-            raise ValueError(f"No data feed found for '{symbol}'.")
+            raise BadSymbol(f"No data feed found for '{symbol}'.")
         data_feed: DataFeed = self._data_feeds[symbol]
         [penultimate, latest] = data_feed.get_data_between_timestamps(
             end=self.milliseconds(), limit=2

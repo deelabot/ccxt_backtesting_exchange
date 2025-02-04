@@ -1,4 +1,5 @@
 import pytest
+from ccxt.base.errors import BadSymbol
 
 
 @pytest.fixture
@@ -59,3 +60,8 @@ def test_backtester_fetch_tickers(
     tickers = backtester_with_data_feed.fetch_tickers()
     expected_result = [expected_sol_ticker, expected_btc_ticker]
     assert tickers == expected_result
+
+
+def test_backtester_fetch_ticker_with_invalid_symbol(backtester_with_data_feed):
+    with pytest.raises(BadSymbol):
+        backtester_with_data_feed.fetch_ticker("INVALID/USDT")
