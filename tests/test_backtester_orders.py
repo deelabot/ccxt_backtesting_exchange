@@ -76,6 +76,27 @@ def test_create_order_insufficient_funds_sell(backtester):
         backtester.create_order("BTC/USDT", "limit", "sell", 10.0, 50000.0)
 
 
+def test_create_order_uses_correct_time(backtester):
+    order1 = backtester.create_order("SOL/USDT", "limit", "buy", 1, 150.0)
+    backtester.tick()
+    order2 = backtester.create_order("SOL/USDT", "limit", "buy", 1, 200.0)
+    assert order1["timestamp"] == 1735686000000
+    assert order1["datetime"] == "2024-12-31 23:00:00"
+    assert order2["timestamp"] == 1735686060000
+    assert order2["datetime"] == "2024-12-31 23:01:00"
+
+
+def test_cancel_order_uses_correct_time(backtester):
+    order = backtester.create_order("SOL/USDT", "limit", "buy", 1, 150.0)
+    backtester.tick()
+    backtester.cancel_order(order["id"])
+    assert order["timestamp"] == 1735686000000
+    assert order["datetime"] == "2024-12-31 23:00:00"
+    cancelled_order = backtester.fetch_order(order["id"])
+    assert cancelled_order["status"] == "canceled"
+    assert cancelled_order["lastTradeTimestamp"] == 1735686060000
+
+
 def test_fetch_orders_without_symbol(backtester_with_orders):
     orders = backtester_with_orders.fetch_orders()
     assert len(orders) == 10

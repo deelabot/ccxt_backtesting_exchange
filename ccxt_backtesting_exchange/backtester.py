@@ -220,8 +220,29 @@ class Backtester(ccxt.Exchange):
         # Update the balance by adding/subtracting the amount
         self.__update_df_value_by_column(self._balances, "asset", asset, column, amount)
 
+    def tick(self) -> bool:
+        """
+        Advance the clock by one time step.
+
+        :return: True if the clock has not reached the end time, False otherwise.
+        """
+        return self.__clock.tick()
+
     def milliseconds(self):
-        return self.__clock.get_current_time()
+        """
+        Get the current time in milliseconds.
+
+        :return: The current time in milliseconds.
+        """
+        return self.__clock.epoch()
+
+    def timestamp(self):
+        """
+        Get the current time as a timestamp string.
+
+        :return: The current time as a timestamp string.
+        """
+        return self.__clock.datetime()
 
     def add_data_feed(self, symbol: str, timeframe: str, file_path: str):
         """
@@ -325,7 +346,7 @@ class Backtester(ccxt.Exchange):
 
         order_id = len(self._orders)
         self._orders.loc[order_id] = {
-            "datetime": self.milliseconds(),
+            "datetime": self.timestamp(),
             "timestamp": self.milliseconds(),
             "lastTradeTimestamp": None,
             "symbol": symbol,
@@ -447,6 +468,9 @@ class Backtester(ccxt.Exchange):
         """
         self.__set_df_value_by_column(
             self._orders, "index", id, "status", OrderStatus.CANCELED.value
+        )
+        self.__set_df_value_by_column(
+            self._orders, "index", id, "lastTradeTimestamp", self.milliseconds()
         )
 
     def load_markets(self, reload=False, params=...):
