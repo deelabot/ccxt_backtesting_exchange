@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 from ccxt.base.errors import BadSymbol
 
+from .utils import assert_timestamps_in_range
+
 
 @pytest.fixture
 def backtester_with_data_feed(backtester):
@@ -99,3 +101,34 @@ def test_get_ohlcv_multiple_times_do_not_conflict(backtester_with_data_feed):
     assert ohlcv2.shape == (60, 6)
     assert ohlcv3.shape == (2, 6)
     assert ohlcv4.shape == (4, 6)
+
+
+def test_get_ohlcv_with_start_time(backtester_with_data_feed):
+    ohlcv = backtester_with_data_feed.fetch_ohlcv("BTC/USDT", "5m", since=1735687800000)
+    assert ohlcv.shape == (6, 6)
+    first_expected_timestamp = 1735687800000
+    last_expected_timestamp = 1735689300000
+    assert_timestamps_in_range(ohlcv, first_expected_timestamp, last_expected_timestamp)
+
+
+def test_get_ohlcv_with_end_time(backtester_with_data_feed):
+    ohlcv = backtester_with_data_feed.fetch_ohlcv(
+        "BTC/USDT", "5m", params={"until": 1735687800000}
+    )
+    assert ohlcv.shape == (6, 6)
+    first_expected_timestamp = 1735686000000
+    last_expected_timestamp = 1735687500000
+    assert_timestamps_in_range(ohlcv, first_expected_timestamp, last_expected_timestamp)
+
+
+def test_get_ohlcv_with_valid_irregular_start_time(backtester_with_data_feed):
+    ohlcv = backtester_with_data_feed.fetch_ohlcv("BTC/USDT", "5m", since=1735687680000)
+    assert ohlcv.shape == (6, 6)
+    first_expected_timestamp = 1735687800000
+    last_expected_timestamp = 1735689300000
+    assert_timestamps_in_range(ohlcv, first_expected_timestamp, last_expected_timestamp)
+
+
+def test_get_ohlcv_on_invalid_pair(backtester_with_data_feed):
+    with pytest.raises(BadSymbol):
+        backtester_with_data_feed.fetch_ohlcv("INVALID/USDT", "5m")
