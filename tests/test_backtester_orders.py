@@ -248,3 +248,7 @@ def test_fetch_open_orders(backtester_with_orders):
 def test_closed_orders_is_empty(backtester):
     closed_orders = backtester.fetch_closed_orders()
     assert len(closed_orders) == 0
+
+
+def test_closed_orders_returns_correct_orders(backtester_with_data_feed):
+    pass

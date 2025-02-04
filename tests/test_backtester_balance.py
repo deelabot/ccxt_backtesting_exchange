@@ -150,3 +150,24 @@ def test_attempt_cancelling_already_cancelled_order_raises_exception(backtester)
     backtester.cancel_order(order["id"])
     with pytest.raises(BadRequest):
         backtester.cancel_order(order["id"])
+
+
+def test_fill_limit_buy_order_modifies_balance_correctly(backtester_with_data_feed):
+    pass
+
+
+def test_fill_limit_sell_order_modifies_balance_correctly(backtester_with_data_feed):
+    pass
+
+
+def test_fill_market_buy_order_modifies_balance_correctly(backtester_with_data_feed):
+
+    pass
+
+
+def test_fill_market_sell_order_modifies_balance_correctly(backtester_with_data_feed):
+    pass
+
+
+def test_fill_multiple_orders_modifies_balance_correctly(backtester_with_data_feed):
+    pass
