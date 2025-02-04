@@ -10,7 +10,9 @@ from ccxt_backtesting_exchange.clock import Clock
 @pytest.fixture
 def backtester():
     clock = Clock(
-        start_time=datetime(month=12, day=31, year=2024, hour=23, tzinfo=timezone.utc),
+        start_time=datetime(
+            month=12, day=31, year=2024, hour=23, minute=30, tzinfo=timezone.utc
+        ),
         end_time=datetime(
             month=12,
             day=31,

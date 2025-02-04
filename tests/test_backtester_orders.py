@@ -80,21 +80,21 @@ def test_create_order_uses_correct_time(backtester):
     order1 = backtester.create_order("SOL/USDT", "limit", "buy", 1, 150.0)
     backtester.tick()
     order2 = backtester.create_order("SOL/USDT", "limit", "buy", 1, 200.0)
-    assert order1["timestamp"] == 1735686000000
-    assert order1["datetime"] == "2024-12-31 23:00:00"
-    assert order2["timestamp"] == 1735686060000
-    assert order2["datetime"] == "2024-12-31 23:01:00"
+    assert order1["timestamp"] == 1735687800000
+    assert order1["datetime"] == "2024-12-31 23:30:00"
+    assert order2["timestamp"] == 1735687860000
+    assert order2["datetime"] == "2024-12-31 23:31:00"
 
 
 def test_cancel_order_uses_correct_time(backtester):
     order = backtester.create_order("SOL/USDT", "limit", "buy", 1, 150.0)
     backtester.tick()
     backtester.cancel_order(order["id"])
-    assert order["timestamp"] == 1735686000000
-    assert order["datetime"] == "2024-12-31 23:00:00"
+    assert order["timestamp"] == 1735687800000
+    assert order["datetime"] == "2024-12-31 23:30:00"
     cancelled_order = backtester.fetch_order(order["id"])
     assert cancelled_order["status"] == "canceled"
-    assert cancelled_order["lastTradeTimestamp"] == 1735686060000
+    assert cancelled_order["lastTradeTimestamp"] == 1735687860000
 
 
 def test_fetch_orders_without_symbol(backtester_with_orders):
