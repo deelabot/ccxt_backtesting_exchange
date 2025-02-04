@@ -1,13 +1,7 @@
 import pytest
+
+
 from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest
-from ccxt_backtesting_exchange.backtester import Backtester
-
-
-@pytest.fixture
-def backtester():
-    return Backtester(
-        balances={"BTC": 1.0, "ETH": 5.0, "SOL": 10.0, "USDT": 10000.0}, fee=0.001
-    )
 
 
 @pytest.fixture

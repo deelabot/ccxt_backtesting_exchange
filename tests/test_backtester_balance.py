@@ -1,13 +1,5 @@
 import pytest
 from ccxt.base.errors import InsufficientFunds
-from ccxt_backtesting_exchange.backtester import Backtester
-
-
-@pytest.fixture
-def backtester():
-    return Backtester(
-        balances={"BTC": 1.0, "ETH": 5.0, "SOL": 10.0, "USDT": 1000.0}, fee=0.001
-    )
 
 
 def test_initial_balances(backtester):
@@ -16,7 +8,7 @@ def test_initial_balances(backtester):
         "BTC": {"free": 1.0, "used": 0, "total": 1.0},
         "ETH": {"free": 5.0, "used": 0, "total": 5.0},
         "SOL": {"free": 10.0, "used": 0, "total": 10.0},
-        "USDT": {"free": 1000.0, "used": 0, "total": 1000.0},
+        "USDT": {"free": 10000.0, "used": 0, "total": 10000.0},
     }
     assert balance == expected_balance
 
@@ -64,7 +56,7 @@ def test_deposit_and_withdraw_on_multiple_assets(backtester):
         "BTC": {"free": 1.3, "used": 0, "total": 1.3},
         "ETH": {"free": 6.0, "used": 0, "total": 6.0},
         "SOL": {"free": 10.0, "used": 0, "total": 10.0},
-        "USDT": {"free": 500.0, "used": 0, "total": 500.0},
+        "USDT": {"free": 9500.0, "used": 0, "total": 9500.0},
     }
     assert balance == expected_balance
 
@@ -74,7 +66,7 @@ def test_create_buy_order_properly_affects_balances(backtester):
     balance = backtester.fetch_balance()
     expected_balance = {
         "SOL": {"free": 10, "used": 0, "total": 10},
-        "USDT": {"free": 799.8, "used": 200.2, "total": 1000.0},
+        "USDT": {"free": 9799.8, "used": 200.2, "total": 10000.0},
         "BTC": {"free": 1, "used": 0, "total": 1},
     }
     assert balance["SOL"] == expected_balance["SOL"]
@@ -90,7 +82,7 @@ def test_create_sell_order_properly_affects_balances(backtester):
     balance = backtester.fetch_balance()
     expected_balance = {
         "SOL": {"free": 9, "used": 1, "total": 10},
-        "USDT": {"free": 1000.0, "used": 0, "total": 1000.0},
+        "USDT": {"free": 10000.0, "used": 0, "total": 10000.0},
         "BTC": {"free": 1, "used": 0, "total": 1},
     }
     assert balance["SOL"] == expected_balance["SOL"]
