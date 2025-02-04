@@ -331,6 +331,7 @@ class Backtester(ccxt.Exchange):
             [timestamp, open, high, low, close, volume] = self._data_feeds[
                 symbol
             ].get_data_at_timestamp(self.milliseconds())
+            print(print(f"open: {open}, price: {price}, compare: {price > open}"))
             if side == "buy" and price > open:
                 if params.get("postOnly", False):
                     raise OrderImmediatelyFillable(
@@ -338,14 +339,13 @@ class Backtester(ccxt.Exchange):
                     )
                 else:
                     order_type = "market"
-            else:  # side == "sell"
-                if price < open:
-                    if params.get("postOnly", False):
-                        raise OrderImmediatelyFillable(
-                            "The order would be filled immediately."
-                        )
-                    else:
-                        order_type = "market"
+            elif side == "sell" and price < open:
+                if params.get("postOnly", False):
+                    raise OrderImmediatelyFillable(
+                        "The order would be filled immediately."
+                    )
+                else:
+                    order_type = "market"
             if order_type == "market":
                 price = open
 
