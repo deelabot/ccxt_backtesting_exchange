@@ -5,7 +5,7 @@ from ccxt_backtesting_exchange.data_feed import DataFeed
 
 @pytest.fixture
 def data_feed():
-    return DataFeed("./data/test-data.json")
+    return DataFeed("./data/test-sol-data.json")
 
 
 @pytest.fixture()

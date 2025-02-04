@@ -4,6 +4,7 @@ from enum import Enum
 import ccxt
 from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
 import pandas as pd
+import numpy as np
 
 
 from .data_feed import DataFeed
@@ -494,23 +495,24 @@ class Backtester(ccxt.Exchange):
             end=self.milliseconds(), limit=2
         )
         [timestamp, open, high, low, close, volume] = latest
-        change = close - open
+        change = np.float32(close - open)
 
         return {
             "symbol": symbol,
-            "timestamp": timestamp,
-            "datetime": timestamp,
+            "timestamp": self.milliseconds(),
+            "datetime": self.timestamp(),
             "high": high,
             "low": low,
-            "bid": open,
-            "ask": close,
+            # figure out how to set bid/ask
+            # "bid": open,
+            # "ask": close,
             "last": close,
             "baseVolume": volume,
             "open": open,
             "close": close,
             "previousClose": penultimate[4],
             "change": change,
-            "percentage": change / open * 100,
+            "percentage": np.float16(change / open * 100).round(3),
             "average": (open + close) / 2,
         }
 
