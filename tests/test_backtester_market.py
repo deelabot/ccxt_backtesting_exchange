@@ -6,14 +6,6 @@ from .utils import assert_timestamps_in_range
 
 
 @pytest.fixture
-def backtester_with_data_feed(backtester):
-    backtester.add_data_feed("SOL/USDT", "1m", "./data/test-sol-data.json")
-    backtester.add_data_feed("BTC/USDT", "1m", "./data/test-btc-data.json")
-
-    return backtester
-
-
-@pytest.fixture
 def expected_sol_ticker():
     return {
         "symbol": "SOL/USDT",
