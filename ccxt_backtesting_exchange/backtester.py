@@ -224,6 +224,52 @@ class Backtester(ccxt.Exchange):
         # Update the balance by adding/subtracting the amount
         self.__update_df_value_by_column(self._balances, "asset", asset, column, amount)
 
+    def fill_orders(self):
+        """
+        Fill orders that are fillable on the current timestamp.
+        """
+        open_orders = self._orders[self._orders["status"] == OrderStatus.OPEN.value]
+        symbols = open_orders["symbol"].unique()
+
+        for symbol in symbols:
+            [timestamp, open, high, low, close, volume] = self._data_feeds[
+                symbol
+            ].get_data_at_timestamp(self.milliseconds())
+            base_asset, quote_asset = symbol.split("/")
+            for index, order in open_orders[open_orders["symbol"] == symbol].iterrows():
+                trade_value = order["amount"] * order["price"]
+                if order["price"] >= low and order["price"] <= high:
+                    if order["side"] == "buy":
+                        trade_value += order["fee"]["cost"]
+                        self._update_asset_balance(quote_asset, "used", -trade_value)
+                        self._update_asset_balance(quote_asset, "total", -trade_value)
+                        self._update_asset_balance(base_asset, "free", order["amount"])
+                        self._update_asset_balance(base_asset, "total", order["amount"])
+
+                    elif order["side"] == "sell":
+                        trade_value -= order["fee"]["cost"]
+                        self._update_asset_balance(base_asset, "used", -order["amount"])
+                        self._update_asset_balance(
+                            base_asset, "total", -order["amount"]
+                        )
+                        self._update_asset_balance(quote_asset, "free", trade_value)
+                        self._update_asset_balance(quote_asset, "total", trade_value)
+
+                    self.__set_df_value_by_column(
+                        self._orders,
+                        "index",
+                        index,
+                        "status",
+                        OrderStatus.FILLED.value,
+                    )
+                    self.__set_df_value_by_column(
+                        self._orders,
+                        "index",
+                        index,
+                        "lastTradeTimestamp",
+                        self.milliseconds(),
+                    )
+
     def tick(self) -> bool:
         """
         Advance the clock by one time step.
@@ -294,7 +340,7 @@ class Backtester(ccxt.Exchange):
         order_type: str,
         side: str,
         amount: float,
-        price: float,
+        price: float = None,
         params: dict = {},
     ) -> any:
         """
@@ -327,11 +373,11 @@ class Backtester(ccxt.Exchange):
         if not isinstance(price, (int, float)) or price <= 0:
             raise BadRequest("Invalid price. Must be a positive number.")
         datafeed = self._data_feeds.get(symbol, None)
+
         if datafeed and order_type == "limit":
             [timestamp, open, high, low, close, volume] = self._data_feeds[
                 symbol
             ].get_data_at_timestamp(self.milliseconds())
-            print(print(f"open: {open}, price: {price}, compare: {price > open}"))
             if side == "buy" and price > open:
                 if params.get("postOnly", False):
                     raise OrderImmediatelyFillable(

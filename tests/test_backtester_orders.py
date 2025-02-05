@@ -245,10 +245,25 @@ def test_fetch_open_orders(backtester_with_orders):
     assert len(open_orders_post_cancel) == 4
 
 
-def test_closed_orders_is_empty(backtester):
-    closed_orders = backtester.fetch_closed_orders()
-    assert len(closed_orders) == 0
+def test_closed_orders_is_empty(backtest_with_data_feed_and_orders):
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 0
 
 
-def test_closed_orders_returns_correct_orders(backtester_with_data_feed):
-    pass
+def test_closed_orders_returns_correct_orders_after_fills(
+    backtest_with_data_feed_and_orders,
+):
+
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 0
+    backtest_with_data_feed_and_orders.fill_orders()
+
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 4
+
+
+def test_open_orders_returns_correct_orders_after_fills(
+    backtest_with_data_feed_and_orders,
+):
+
+    assert len(backtest_with_data_feed_and_orders.fetch_open_orders("SOL/USDT")) == 4
+    backtest_with_data_feed_and_orders.fill_orders()
+
+    assert len(backtest_with_data_feed_and_orders.fetch_open_orders("SOL/USDT")) == 0

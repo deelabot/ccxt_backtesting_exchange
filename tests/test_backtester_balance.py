@@ -2,6 +2,7 @@ import pytest
 from ccxt.base.errors import InsufficientFunds, OrderNotFound, BadRequest
 
 from ccxt_backtesting_exchange.backtester import Backtester
+from .utils import assert_dict_close
 
 
 @pytest.fixture
@@ -153,21 +154,74 @@ def test_attempt_cancelling_already_cancelled_order_raises_exception(backtester)
 
 
 def test_fill_limit_buy_order_modifies_balance_correctly(backtester_with_data_feed):
-    pass
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 180.0)
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 190.30)
+    backtester_with_data_feed.fill_orders()
+    balance = backtester_with_data_feed.fetch_balance()
+    expected_balance = {
+        "BTC": {"free": 1.0, "used": 0, "total": 1.0},
+        "ETH": {"free": 5.0, "used": 0, "total": 5.0},
+        "SOL": {"free": 11.0, "used": 0, "total": 11.0},
+        "USDT": {"free": 9629.3297, "used": 180.18, "total": 9809.5097},
+    }
+    assert_dict_close(balance, expected_balance)
 
 
 def test_fill_limit_sell_order_modifies_balance_correctly(backtester_with_data_feed):
-    pass
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "sell", 1.0, 250)
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "sell", 1.0, 190.49)
+    backtester_with_data_feed.fill_orders()
+    balance = backtester_with_data_feed.fetch_balance()
+    expected_balance = {
+        "BTC": {"free": 1.0, "used": 0, "total": 1.0},
+        "ETH": {"free": 5.0, "used": 0, "total": 5.0},
+        "SOL": {"free": 8.0, "used": 1, "total": 9.0},
+        "USDT": {"free": 10190.29951, "used": 0, "total": 10190.29951},
+    }
+    assert_dict_close(balance, expected_balance)
 
 
 def test_fill_market_buy_order_modifies_balance_correctly(backtester_with_data_feed):
-
-    pass
+    backtester_with_data_feed.create_order("SOL/USDT", "market", "buy", 1.0, 190.49)
+    backtester_with_data_feed.fill_orders()
+    balance = backtester_with_data_feed.fetch_balance()
+    expected_balance = {
+        "BTC": {"free": 1.0, "used": 0, "total": 1.0},
+        "ETH": {"free": 5.0, "used": 0, "total": 5.0},
+        "SOL": {"free": 11.0, "used": 0, "total": 11.0},
+        "USDT": {"free": 9809.31951, "used": 0, "total": 9809.31951},
+    }
+    assert_dict_close(balance, expected_balance)
 
 
 def test_fill_market_sell_order_modifies_balance_correctly(backtester_with_data_feed):
-    pass
+    backtester_with_data_feed.create_order("SOL/USDT", "market", "sell", 1.0, 190.49)
+    backtester_with_data_feed.fill_orders()
+    balance = backtester_with_data_feed.fetch_balance()
+    expected_balance = {
+        "BTC": {"free": 1.0, "used": 0, "total": 1.0},
+        "ETH": {"free": 5.0, "used": 0, "total": 5.0},
+        "SOL": {"free": 9.0, "used": 0, "total": 9.0},
+        "USDT": {"free": 10190.29951, "used": 0, "total": 10190.29951},
+    }
+    assert_dict_close(balance, expected_balance)
 
 
-def test_fill_multiple_orders_modifies_balance_correctly(backtester_with_data_feed):
-    pass
+def test_fill_multiple_orders_modifies_balance_correctly(
+    backtest_with_data_feed_and_orders,
+):
+    backtest_with_data_feed_and_orders.create_order(
+        "SOL/USDT", "limit", "buy", 1.0, 180.0
+    )
+    backtest_with_data_feed_and_orders.create_order(
+        "SOL/USDT", "limit", "sell", 1.0, 250
+    )
+    backtest_with_data_feed_and_orders.fill_orders()
+    balance = backtest_with_data_feed_and_orders.fetch_balance()
+    expected_balance = {
+        "BTC": {"free": 1.0, "used": 0, "total": 1.0},
+        "ETH": {"free": 5.0, "used": 0, "total": 5.0},
+        "SOL": {"free": 11.0, "used": 1, "total": 12.0},
+        "USDT": {"free": 9438.50847, "used": 180.18, "total": 9618.68847},
+    }
+    assert_dict_close(balance, expected_balance)
