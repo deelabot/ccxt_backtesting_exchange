@@ -276,6 +276,8 @@ class Backtester(ccxt.Exchange):
 
         :return: True if the clock has not reached the end time, False otherwise.
         """
+        if self._data_feeds:
+            self.fill_orders()
         return self.__clock.tick()
 
     def milliseconds(self):
@@ -535,6 +537,21 @@ class Backtester(ccxt.Exchange):
         return self.fetch_orders(
             symbol, since, limit, {"status": OrderStatus.FILLED.value, **params}
         )
+
+    def fetch_my_trades(self, symbol=None, since=None, limit=None, params: dict = {}):
+        """
+        Fetches trades for a given symbol.add()
+
+        :param symbol: The trading pair symbol (e.g., 'BTC/USDT').
+        :param since: Timestamp in milliseconds to fetch trades since.
+        :param limit: The maximum number of trades to return.
+        :param params: Additional parameters specific to the exchange API.
+
+        :return: A list of trades.
+        uses fetch_closed_orders since all traes here are mine, might rethink this
+        if we start using trades to tick instead of candles.
+        """
+        return self.fetch_closed_orders(symbol, since, limit, params)
 
     def cancel_order(self, id: str, symbol: str = None, params: dict = {}):
         """

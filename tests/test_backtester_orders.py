@@ -267,3 +267,24 @@ def test_open_orders_returns_correct_orders_after_fills(
     backtest_with_data_feed_and_orders.fill_orders()
 
     assert len(backtest_with_data_feed_and_orders.fetch_open_orders("SOL/USDT")) == 0
+
+
+def test_assert_orders_fill_in_correct_sequence_on_every_tick(
+    backtester_with_data_feed,
+):
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 190.30)
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 189.8)
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 189.5)
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 3
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 2
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 1
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 1
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 1
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 1
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 0
