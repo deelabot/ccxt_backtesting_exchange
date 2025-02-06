@@ -43,6 +43,15 @@ def expected_btc_ticker():
     }
 
 
+def test_backtester_raises_error_when_adding_existing_data_feed(
+    backtester_with_data_feed,
+):
+    with pytest.raises(NameError):
+        backtester_with_data_feed.add_data_feed(
+            "SOL/USDT", "1m", "./data/test-sol-data.json"
+        )
+
+
 def test_backtester_fetch_ticker(backtester_with_data_feed, expected_btc_ticker):
     sol_ticker = backtester_with_data_feed.fetch_ticker("BTC/USDT")
     expected_result = expected_btc_ticker
