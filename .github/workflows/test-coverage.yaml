@@ -2,7 +2,7 @@ name: Test and Coverage
 
 on:
   pull_request:
-  
+
   push:
     branches:
       - master
@@ -45,7 +45,9 @@ jobs:
         with:
           path: coverage.xml
           minimum_coverage: 75
-          skip_covered: false
+          fail_below_threshold: true
+          show_line: true
+          show_branch: true
           show_missing: true
           link_missing_lines: true
           only_changed_files: true
