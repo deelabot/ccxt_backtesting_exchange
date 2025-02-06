@@ -6,14 +6,6 @@ from .utils import assert_timestamps_in_range
 
 
 @pytest.fixture
-def backtester_with_data_feed(backtester):
-    backtester.add_data_feed("SOL/USDT", "1m", "./data/test-sol-data.json")
-    backtester.add_data_feed("BTC/USDT", "1m", "./data/test-btc-data.json")
-
-    return backtester
-
-
-@pytest.fixture
 def expected_sol_ticker():
     return {
         "symbol": "SOL/USDT",
@@ -49,6 +41,15 @@ def expected_btc_ticker():
         "percentage": 0.006,
         "average": 93728.36499999999,
     }
+
+
+def test_backtester_raises_error_when_adding_existing_data_feed(
+    backtester_with_data_feed,
+):
+    with pytest.raises(NameError):
+        backtester_with_data_feed.add_data_feed(
+            "SOL/USDT", "1m", "./data/test-sol-data.json"
+        )
 
 
 def test_backtester_fetch_ticker(backtester_with_data_feed, expected_btc_ticker):
