@@ -216,27 +216,28 @@ class Backtester(ccxt.Exchange):
         # Update the balance by adding/subtracting the amount
         self.__update_df_value_by_column(self._balances, "asset", asset, column, amount)
 
-    def deposit(self, asset: str, amount: float, id=None):
+    def deposit(self, asset: str, amount: float):
         """
         Deposit an asset to the backtesting exchange.
         """
         self._update_asset_balance(asset, "free", amount)
         self._update_asset_balance(asset, "total", amount)
 
-    def withdraw(self, asset: str, amount: float, id=None):
+    def withdraw(self, code: str, amount: float, params={}):
         """
         Withdraw an asset from the backtesting exchange.
+        :param str code: unified currency code which is the asset to withdraw
         """
-        free_balance = self._get_asset_balance(asset, "free")
+        free_balance = self._get_asset_balance(code, "free")
         if free_balance < amount:
             raise InsufficientFunds(
-                f"Insufficient balance. {asset} balance: {free_balance}"
+                f"Insufficient balance. {code} balance: {free_balance}"
             )
 
-        self._update_asset_balance(asset, "free", -amount)
-        self._update_asset_balance(asset, "total", -amount)
+        self._update_asset_balance(code, "free", -amount)
+        self._update_asset_balance(code, "total", -amount)
 
-    def fetch_balance(self):
+    def fetch_balance(self, params={}):
         """
         Fetch the balance of the backtesting exchange.
 
