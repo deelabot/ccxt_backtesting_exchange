@@ -4,6 +4,7 @@ from typing import Dict
 from enum import Enum
 
 import ccxt
+from ccxt.base.exchange import Num, OrderSide, OrderType
 from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
 
 
@@ -244,13 +245,19 @@ class Backtester(ccxt.Exchange):
         return self._balances.set_index("asset").to_dict(orient="index")
 
     def create_order(
-        self, symbol: str, order_type: str, side: str, amount: float, price: float
+        self,
+        symbol: str,
+        type: OrderType,
+        side: OrderSide,
+        amount: float,
+        price: float,
+        params={},
     ) -> any:
         """
         Creates a new order and adds it to the order book.
 
         :param symbol: The trading pair (e.g., "BTC/USDT").
-        :param order_type: The type of order (e.g., "limit", "market").
+        :param type: The type of order (e.g., "limit", "market").
         :param side: The order side ("buy" or "sell").
         :param amount: The amount of the base asset to trade.
         :param price: The price at which to place the order.
@@ -264,7 +271,7 @@ class Backtester(ccxt.Exchange):
                 "Invalid symbol format. Expected 'BASE/QUOTE' (e.g., 'BTC/USDT')."
             )
 
-        if order_type not in {"limit", "market"}:
+        if type not in {"limit", "market"}:
             raise BadRequest("Invalid order type. Expected 'limit' or 'market'.")
 
         if side not in {"buy", "sell"}:
@@ -309,7 +316,7 @@ class Backtester(ccxt.Exchange):
             "timestamp": self.__milliseconds(),
             "lastTradeTimestamp": None,
             "symbol": symbol,
-            "type": order_type,
+            "type": type,
             "side": side,
             "price": price,
             "amount": amount,
