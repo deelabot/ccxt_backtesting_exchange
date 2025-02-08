@@ -39,6 +39,7 @@ def backtester(clock):
 def backtester_with_data_feed(backtester):
     backtester.add_data_feed("SOL/USDT", "1m", "./data/test-sol-data.json")
     backtester.add_data_feed("BTC/USDT", "1m", "./data/test-btc-data.json")
+    backtester.add_data_feed("TEST/PAIR", "1m", "./data/test-sol-data.json")
 
     return backtester
 

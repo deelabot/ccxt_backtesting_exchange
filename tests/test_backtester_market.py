@@ -25,6 +25,25 @@ def expected_sol_ticker():
 
 
 @pytest.fixture
+def expected_test_ticker():
+    return {
+        "symbol": "TEST/PAIR",
+        "timestamp": 1735687800000,
+        "datetime": "2024-12-31 23:30:00",
+        "high": 190.5,
+        "low": 190.38,
+        "open": 190.45,
+        "baseVolume": 1394.013,
+        "last": 190.49,
+        "close": 190.49,
+        "previousClose": 190.46,
+        "change": 0.04,
+        "percentage": 0.021,
+        "average": 190.47,
+    }
+
+
+@pytest.fixture
 def expected_btc_ticker():
     return {
         "symbol": "BTC/USDT",
@@ -59,10 +78,14 @@ def test_backtester_fetch_ticker(backtester_with_data_feed, expected_btc_ticker)
 
 
 def test_backtester_fetch_tickers(
-    backtester_with_data_feed, expected_sol_ticker, expected_btc_ticker
+    backtester_with_data_feed,
+    expected_sol_ticker,
+    expected_btc_ticker,
+    expected_test_ticker,
 ):
     tickers = backtester_with_data_feed.fetch_tickers()
-    expected_result = [expected_sol_ticker, expected_btc_ticker]
+    expected_result = [expected_sol_ticker, expected_btc_ticker, expected_test_ticker]
+
     assert tickers == expected_result
 
 
