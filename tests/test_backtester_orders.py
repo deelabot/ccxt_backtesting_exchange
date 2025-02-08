@@ -37,8 +37,23 @@ def test_create_order_buy_success(backtester):
 
 
 def test_create_order_sell_success(backtester):
+    initial_balances = {
+        "BTC": {"free": 1.0, "used": 0.0, "total": 1.0},
+        "ETH": {"free": 5.0, "used": 0.0, "total": 5.0},
+        "SOL": {"free": 10.0, "used": 0.0, "total": 10.0},
+        "USDT": {"free": 10000.0, "used": 0.0, "total": 10000.0},
+    }
+    expected_balances = {
+        "BTC": {"free": 1.0, "used": 0.0, "total": 1.0},
+        "ETH": {"free": 4.0, "used": 1.0, "total": 5.0},
+        "SOL": {"free": 10.0, "used": 0.0, "total": 10.0},
+        "USDT": {"free": 10000.0, "used": 0.0, "total": 10000.0},
+    }
+    assert initial_balances == backtester.fetch_balance()
+
     order = backtester.create_order("ETH/USDT", "limit", "sell", 1.0, 3000.0)
 
+    assert expected_balances == backtester.fetch_balance()
     assert order["symbol"] == "ETH/USDT"
     assert order["type"] == "limit"
     assert order["side"] == "sell"
