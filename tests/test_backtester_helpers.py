@@ -14,11 +14,6 @@ def sample_df():
         "volume": [8.3748, 13.65448, 3.38207]
     })
 
-
-@pytest.fixture
-def backtester():
-    return Backtester(balances={})
-
 # Testing __get_df_value_by_column
 
 
