@@ -85,6 +85,12 @@ def test_set_value_not_found(backtester, sample_df):
             sample_df, "timestamp", 9999999999999, "close", 93500.00)
 
 
+def test_set_value_on_invalid_column(backtester, sample_df):
+    with pytest.raises(ValueError, match="Query column 'nonexistent' not found in the DataFrame."):
+        backtester._Backtester__set_df_value_by_column(
+            sample_df, "nonexistent", 9999999999999, "close", 93500.00)
+
+
 def test_set_multiple_values_limit_exceeded(backtester, sample_df):
     new_row = pd.DataFrame([{
         "timestamp": 1735686060000, "open": 93446.00, "high": 93481.00, "low": 93406.00, "close": 93418.00, "volume": 14.000
