@@ -8,6 +8,10 @@ from ccxt.base.exchange import Num, OrderSide, OrderType
 from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
 
 
+from .data_feed import DataFeed
+from .clock import Clock
+
+
 class OrderStatus(Enum):
     FILLED = "filled"
     PARTIALLY_FILLED = "partially_filled"
@@ -21,8 +25,14 @@ class Backtester(ccxt.Exchange):
     and implements the ccxt.Exchange unified API.
     """
 
-    def __init__(self, balances: Dict, fee=0.0):
+    def __init__(
+        self,
+        balances: Dict,
+        clock: Clock = None,
+        fee=0.0,
+    ):
         super().__init__()
+        # add static properties
 
         self._balances = pd.DataFrame(
             columns=["asset", "free", "used", "total"]
@@ -45,7 +55,10 @@ class Backtester(ccxt.Exchange):
             ]
         )
         self._fee = fee
+        self.__clock = clock
+
         self.__init_balances(balances)
+        self._data_feeds = {}
 
     def __init_balances(self, balances: Dict):
         """
@@ -66,13 +79,7 @@ class Backtester(ccxt.Exchange):
                 for asset, balance in balances.items()
             ]
         )
-        if self._balances.empty:
-            self._balances = updates
-        else:
-            self._balances = pd.concat([self._balances, updates], ignore_index=True)
-
-    def __milliseconds(self):
-        return 0  # todo: implement clock mechanism for backtesting
+        self._balances = updates
 
     def __get_df_value_by_column(
         self, df: pd.DataFrame, query_column: str, query_value: any, return_column: str
@@ -216,6 +223,42 @@ class Backtester(ccxt.Exchange):
         # Update the balance by adding/subtracting the amount
         self.__update_df_value_by_column(self._balances, "asset", asset, column, amount)
 
+    def tick(self) -> bool:
+        """
+        Advance the clock by one time step.
+
+        :return: True if the clock has not reached the end time, False otherwise.
+        """
+        return self.__clock.tick()
+
+    def milliseconds(self):
+        """
+        Get the current time in milliseconds.
+
+        :return: The current time in milliseconds.
+        """
+        return self.__clock.epoch()
+
+    def timestamp(self):
+        """
+        Get the current time as a timestamp string.
+
+        :return: The current time as a timestamp string.
+        """
+        return self.__clock.datetime()
+
+    def add_data_feed(self, symbol: str, timeframe: str, file_path: str):
+        """
+        Add a new data feed to the backtester.
+
+        :param symbol: The trading pair symbol (e.g., 'BTC/USDT').
+        :param timeframe: The timeframe of the data (e.g., '1m', '1h').
+        :param file_path: The path to the data feed file.
+        """
+        if symbol in self._data_feeds:
+            raise NameError(f"Data feed for '{symbol}' already exists.")
+        self._data_feeds[symbol] = DataFeed(file_path, timeframe)
+
     def deposit(self, asset: str, amount: float):
         """
         Deposit an asset to the backtesting exchange.
@@ -313,8 +356,8 @@ class Backtester(ccxt.Exchange):
 
         order_id = len(self._orders)
         self._orders.loc[order_id] = {
-            "datetime": self.__milliseconds(),
-            "timestamp": self.__milliseconds(),
+            "datetime": self.timestamp(),
+            "timestamp": self.milliseconds(),
             "lastTradeTimestamp": None,
             "symbol": symbol,
             "type": type,
@@ -361,7 +404,7 @@ class Backtester(ccxt.Exchange):
             elif column in orders.columns:
                 orders = orders[orders[column] == value]
             else:
-                raise ValueError(f"Invalid column '{column}' in params.")
+                raise BadRequest(f"Invalid column '{column}' in params.")
 
         # Sort orders by timestamp
         orders = orders.sort_values(by="timestamp", ascending=False)
@@ -435,4 +478,65 @@ class Backtester(ccxt.Exchange):
         """
         self.__set_df_value_by_column(
             self._orders, "index", id, "status", OrderStatus.CANCELED.value
+        )
+        self.__set_df_value_by_column(
+            self._orders, "index", id, "lastTradeTimestamp", self.milliseconds()
+        )
+
+    def load_markets(self, reload=False, params=...):
+        raise NotImplementedError(
+            "Method not implemented. Uncertain about how we go about this"
+        )
+
+    def fetch_markets(self, params=...):
+        raise NotImplementedError(
+            "Method not implemented. Uncertain about how we go about this"
+        )
+
+    def fetch_currencies(self, params=...):
+        raise NotImplementedError(
+            "Method not implemented. Uncertain about how we go about this"
+        )
+
+    def fetch_ticker(self, symbol: str, params={}):
+
+        if symbol not in self._data_feeds:
+            raise BadSymbol(f"No data feed found for '{symbol}'.")
+        data_feed: DataFeed = self._data_feeds[symbol]
+        [penultimate, latest] = data_feed.get_data_between_timestamps(
+            end=self.milliseconds(), limit=2
+        )
+        [timestamp, open, high, low, close, volume] = latest
+        change = np.float32(close - open)
+
+        return {
+            "symbol": symbol,
+            "timestamp": self.milliseconds(),
+            "datetime": self.timestamp(),
+            "high": high,
+            "low": low,
+            # figure out how to set bid/ask
+            # "bid": open,
+            # "ask": close,
+            "last": close,
+            "baseVolume": volume,
+            "open": open,
+            "close": close,
+            "previousClose": penultimate[4],
+            "change": change,
+            "percentage": np.float16(change / open * 100).round(3),
+            "average": (open + close) / 2,
+        }
+
+    def fetch_tickers(self, symbols=None, params=...):
+        if symbols is None:
+            symbols = list(self._data_feeds.keys())
+        return [self.fetch_ticker(symbol) for symbol in symbols]
+
+    def fetch_ohlcv(self, symbol, timeframe="1m", since=None, limit=100, params={}):
+        if symbol not in self._data_feeds:
+            raise BadSymbol(f"No data feed found for '{symbol}'.")
+        data_feed: DataFeed = self._data_feeds[symbol]
+        return data_feed.get_data_between_timestamps(
+            start=since, end=params.get("until", None), limit=limit, timeframe=timeframe
         )

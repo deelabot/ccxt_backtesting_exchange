@@ -1,41 +1,18 @@
 import pytest
 import numpy as np
+from .utils import assert_timestamps_in_range
+
 from ccxt_backtesting_exchange.data_feed import DataFeed
 
 
 @pytest.fixture
 def data_feed():
-    return DataFeed("./data/test-data.json")
+    return DataFeed("./data/test-sol-data.json")
 
 
 @pytest.fixture()
 def empty_data_feed():
     return DataFeed("./data/empty.json")
-
-
-def assert_timestamps_in_range(
-    data: np.ndarray,
-    first_expected_timestamp: np.float32,
-    last_expected_timestamp: np.float32,
-):
-    """
-    Assert that all timestamps in the data are within the specified range.
-
-    :param data: A NumPy array or list of timestamps.
-    :param first_expected_timestamp: The first timestamp returned.
-    :param last_expected_timestamp: The last allowable timestamp.
-    """
-    assert isinstance(data, np.ndarray), "Data must be a NumPy array"
-    assert len(data) > 0, "Data should not be empty"
-
-    returned_timestamps = data[:, 0]
-    first_returned_timestamp = returned_timestamps[0]
-    last_returned_timestamp = returned_timestamps[-1]
-
-    assert first_returned_timestamp == first_expected_timestamp
-    assert last_returned_timestamp == last_expected_timestamp
-    assert np.all(returned_timestamps >= first_expected_timestamp)
-    assert np.all(returned_timestamps <= last_expected_timestamp)
 
 
 def test_get_data_without_limit_returns_all(data_feed):
@@ -202,8 +179,8 @@ def test_resample_data_to_lower_timeframe(data_feed):
 
 
 def test_resample_data_with_same_timeframe(data_feed):
-    with pytest.raises(ValueError):
-        data_feed.get_resampled_data("1m")
+    resampled_data = data_feed.get_resampled_data("1m")
+    assert np.array_equal(resampled_data, data_feed.get_data_between_timestamps())
 
 
 def test_resample_data_to_15m_timeframe(data_feed):
