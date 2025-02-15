@@ -1,7 +1,13 @@
 import pytest
 
 
-from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
+from ccxt.base.errors import (
+    InsufficientFunds,
+    BadSymbol,
+    BadRequest,
+    OrderNotFound,
+    OrderImmediatelyFillable,
+)
 
 
 @pytest.fixture
@@ -126,6 +132,66 @@ def test_create_order_uses_correct_time(backtester):
     assert order2["datetime"] == "2024-12-31 23:31:00"
 
 
+def test_create_limit_postonly_buy_order_above_market_price_raises_error(
+    backtester_with_data_feed,
+):
+    with pytest.raises(OrderImmediatelyFillable):
+        backtester_with_data_feed.create_order(
+            "SOL/USDT", "limit", "buy", 1, 1000.0, params={"postOnly": True}
+        )
+
+
+def test_create_limit_postonly_buy_order_below_market_price_works(
+    backtester_with_data_feed,
+):
+    order = backtester_with_data_feed.create_order(
+        "SOL/USDT", "limit", "buy", 1, price=100.0, params={"postOnly": True}
+    )
+    assert order["price"] == 100.0
+    assert order["status"] == "open"
+    assert order["type"] == "limit"
+
+
+def test_create_limit_buy_order_above_market_price_adjusts(backtester_with_data_feed):
+    order = backtester_with_data_feed.create_order(
+        "SOL/USDT", "limit", "buy", 1, 1000.0
+    )
+    assert order["price"] == 190.49
+    assert order["status"] == "open"
+    assert order["type"] == "market"
+
+
+def test_create_limit_postonly_sell_order_below_market_price_raises_error(
+    backtester_with_data_feed,
+):
+    with pytest.raises(OrderImmediatelyFillable):
+        backtester_with_data_feed.create_order(
+            "SOL/USDT", "limit", "sell", 1, 100.0, params={"postOnly": True}
+        )
+
+
+def test_create_limit_postonly_sell_order_above_market_price_works(
+    backtester_with_data_feed,
+):
+    order = backtester_with_data_feed.create_order(
+        "SOL/USDT", "limit", "sell", 1, 400.0, params={"postOnly": True}
+    )
+    assert order["price"] == 400.0
+    assert order["status"] == "open"
+    assert order["type"] == "limit"
+
+
+def test_create_limit_sell_order_below_market_price_adjusts(
+    backtester_with_data_feed,
+):
+    order = backtester_with_data_feed.create_order(
+        "SOL/USDT", "limit", "sell", 1, 100.0
+    )
+    assert order["price"] == 190.49
+    assert order["status"] == "open"
+    assert order["type"] == "market"
+
+
 def test_cancel_order_uses_correct_time(backtester):
     order = backtester.create_order("SOL/USDT", "limit", "buy", 1, 150.0)
     backtester.tick()
@@ -209,6 +275,48 @@ def test_fetch_open_orders(backtester_with_orders):
     assert len(open_orders_post_cancel) == 4
 
 
-def test_closed_orders_is_empty(backtester):
-    closed_orders = backtester.fetch_closed_orders()
-    assert len(closed_orders) == 0
+def test_closed_orders_is_empty(backtest_with_data_feed_and_orders):
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 0
+
+
+def test_closed_orders_returns_correct_orders_after_fills(
+    backtest_with_data_feed_and_orders,
+):
+
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 0
+    backtest_with_data_feed_and_orders.fill_orders()
+
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 4
+
+
+def test_open_orders_returns_correct_orders_after_fills(
+    backtest_with_data_feed_and_orders,
+):
+
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 0
+    assert len(backtest_with_data_feed_and_orders.fetch_open_orders("SOL/USDT")) == 4
+    backtest_with_data_feed_and_orders.fill_orders()
+
+    assert len(backtest_with_data_feed_and_orders.fetch_open_orders("SOL/USDT")) == 0
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 4
+
+
+def test_assert_orders_fill_in_correct_sequence_on_every_tick(
+    backtester_with_data_feed,
+):
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 190.30)
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 189.8)
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 189.5)
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 3
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 2
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 1
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 1
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 1
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 1
+    backtester_with_data_feed.tick()
+    assert len(backtester_with_data_feed.fetch_open_orders("SOL/USDT")) == 0

@@ -33,3 +33,21 @@ def backtester(clock):
         clock=clock,
         fee=0.001,
     )
+
+
+@pytest.fixture
+def backtester_with_data_feed(backtester):
+    backtester.add_data_feed("SOL/USDT", "1m", "./data/test-sol-data.json")
+    backtester.add_data_feed("BTC/USDT", "1m", "./data/test-btc-data.json")
+
+    return backtester
+
+
+@pytest.fixture
+def backtest_with_data_feed_and_orders(backtester_with_data_feed):
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 190.30)
+    backtester_with_data_feed.create_order("SOL/USDT", "limit", "buy", 1.0, 190.25)
+    backtester_with_data_feed.create_order("SOL/USDT", "market", "buy", 1.0, 190.49)
+    backtester_with_data_feed.create_order("SOL/USDT", "market", "sell", 1.0, 190.49)
+
+    return backtester_with_data_feed

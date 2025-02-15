@@ -4,8 +4,16 @@ from typing import Dict
 from enum import Enum
 
 import ccxt
-from ccxt.base.exchange import Num, OrderSide, OrderType
-from ccxt.base.errors import InsufficientFunds, BadSymbol, BadRequest, OrderNotFound
+from ccxt.base.errors import (
+    InsufficientFunds,
+    BadSymbol,
+    BadRequest,
+    OrderNotFound,
+    OrderImmediatelyFillable,
+)
+from ccxt.base.exchange import OrderSide, OrderType
+import pandas as pd
+import numpy as np
 
 
 from .data_feed import DataFeed
@@ -223,12 +231,60 @@ class Backtester(ccxt.Exchange):
         # Update the balance by adding/subtracting the amount
         self.__update_df_value_by_column(self._balances, "asset", asset, column, amount)
 
+    def fill_orders(self):
+        """
+        Fill orders that are fillable on the current timestamp.
+        """
+        open_orders = self._orders[self._orders["status"] == OrderStatus.OPEN.value]
+        symbols = open_orders["symbol"].unique()
+
+        for symbol in symbols:
+            [timestamp, open, high, low, close, volume] = self._data_feeds[
+                symbol
+            ].get_data_at_timestamp(self.milliseconds())
+            base_asset, quote_asset = symbol.split("/")
+            for index, order in open_orders[open_orders["symbol"] == symbol].iterrows():
+                trade_value = order["amount"] * order["price"]
+                if order["price"] >= low and order["price"] <= high:
+                    if order["side"] == "buy":
+                        trade_value += order["fee"]["cost"]
+                        self._update_asset_balance(quote_asset, "used", -trade_value)
+                        self._update_asset_balance(quote_asset, "total", -trade_value)
+                        self._update_asset_balance(base_asset, "free", order["amount"])
+                        self._update_asset_balance(base_asset, "total", order["amount"])
+
+                    elif order["side"] == "sell":
+                        trade_value -= order["fee"]["cost"]
+                        self._update_asset_balance(base_asset, "used", -order["amount"])
+                        self._update_asset_balance(
+                            base_asset, "total", -order["amount"]
+                        )
+                        self._update_asset_balance(quote_asset, "free", trade_value)
+                        self._update_asset_balance(quote_asset, "total", trade_value)
+
+                    self.__set_df_value_by_column(
+                        self._orders,
+                        "index",
+                        index,
+                        "status",
+                        OrderStatus.FILLED.value,
+                    )
+                    self.__set_df_value_by_column(
+                        self._orders,
+                        "index",
+                        index,
+                        "lastTradeTimestamp",
+                        self.milliseconds(),
+                    )
+
     def tick(self) -> bool:
         """
         Advance the clock by one time step.
 
         :return: True if the clock has not reached the end time, False otherwise.
         """
+        if self._data_feeds:
+            self.fill_orders()
         return self.__clock.tick()
 
     def milliseconds(self):
@@ -326,6 +382,28 @@ class Backtester(ccxt.Exchange):
 
         if not isinstance(price, (int, float)) or price <= 0:
             raise BadRequest("Invalid price. Must be a positive number.")
+        datafeed = self._data_feeds.get(symbol, None)
+
+        if datafeed and type == "limit":
+            [timestamp, open, high, low, close, volume] = self._data_feeds[
+                symbol
+            ].get_data_at_timestamp(self.milliseconds())
+            if side == "buy" and price > open:
+                if params.get("postOnly", False):
+                    raise OrderImmediatelyFillable(
+                        "The order would be filled immediately."
+                    )
+                else:
+                    type = "market"
+            elif side == "sell" and price < open:
+                if params.get("postOnly", False):
+                    raise OrderImmediatelyFillable(
+                        "The order would be filled immediately."
+                    )
+                else:
+                    type = "market"
+            if type == "market":
+                price = open
 
         # Calculate fee
         fee_cost = amount * price * self._fee
@@ -346,7 +424,7 @@ class Backtester(ccxt.Exchange):
             self._update_asset_balance(quote_asset, "used", +trade_value)
             self._update_asset_balance(quote_asset, "free", -trade_value)
 
-        else:  # side == "sell"
+        elif side == "sell":
             if self._get_asset_balance(base_asset, "free") < amount:
                 raise InsufficientFunds(
                     f"Insufficient balance: {base_asset} balance too low."
@@ -468,6 +546,21 @@ class Backtester(ccxt.Exchange):
             symbol, since, limit, {"status": OrderStatus.FILLED.value, **params}
         )
 
+    def fetch_my_trades(self, symbol=None, since=None, limit=None, params: dict = {}):
+        """
+        Fetches trades for a given symbol.add()
+
+        :param symbol: The trading pair symbol (e.g., 'BTC/USDT').
+        :param since: Timestamp in milliseconds to fetch trades since.
+        :param limit: The maximum number of trades to return.
+        :param params: Additional parameters specific to the exchange API.
+
+        :return: A list of trades.
+        uses fetch_closed_orders since all traes here are mine, might rethink this
+        if we start using trades to tick instead of candles.
+        """
+        return self.fetch_closed_orders(symbol, since, limit, params)
+
     def cancel_order(self, id: str, symbol: str = None, params: dict = {}):
         """
         Cancels an order by its ID.
@@ -476,6 +569,19 @@ class Backtester(ccxt.Exchange):
         :param symbol: The trading pair symbol (optional).
         :param params: Additional parameters specific to the exchange API (optional).
         """
+        order = self.fetch_order(id, symbol, params)
+        base_asset, quote_asset = order["symbol"].split("/")
+        if order["status"] != OrderStatus.OPEN.value:
+            raise BadRequest("Order is already closed or canceled.")
+        if order["side"] == "buy":
+            trade_value = order["amount"] * order["price"] + order["fee"]["cost"]
+            self._update_asset_balance(quote_asset, "used", -trade_value)
+            self._update_asset_balance(quote_asset, "free", +trade_value)
+
+        elif order["side"] == "sell":
+            self._update_asset_balance(base_asset, "used", -order["amount"])
+            self._update_asset_balance(base_asset, "free", +order["amount"])
+
         self.__set_df_value_by_column(
             self._orders, "index", id, "status", OrderStatus.CANCELED.value
         )
