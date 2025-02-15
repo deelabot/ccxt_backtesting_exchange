@@ -293,10 +293,12 @@ def test_open_orders_returns_correct_orders_after_fills(
     backtest_with_data_feed_and_orders,
 ):
 
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 0
     assert len(backtest_with_data_feed_and_orders.fetch_open_orders("SOL/USDT")) == 4
     backtest_with_data_feed_and_orders.fill_orders()
 
     assert len(backtest_with_data_feed_and_orders.fetch_open_orders("SOL/USDT")) == 0
+    assert len(backtest_with_data_feed_and_orders.fetch_closed_orders("SOL/USDT")) == 4
 
 
 def test_assert_orders_fill_in_correct_sequence_on_every_tick(
