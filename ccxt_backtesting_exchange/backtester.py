@@ -1,3 +1,5 @@
+import pandas as pd
+import numpy as np
 from typing import Dict
 from enum import Enum
 
@@ -9,6 +11,7 @@ from ccxt.base.errors import (
     OrderNotFound,
     OrderImmediatelyFillable,
 )
+from ccxt.base.exchange import OrderSide, OrderType
 import pandas as pd
 import numpy as np
 
@@ -39,7 +42,11 @@ class Backtester(ccxt.Exchange):
         super().__init__()
         # add static properties
 
-        self._balances = pd.DataFrame(columns=["asset", "free", "used", "total"])
+        self._balances = pd.DataFrame(
+            columns=["asset", "free", "used", "total"]
+        ).astype(
+            {"asset": str, "free": np.float32, "used": np.float32, "total": np.float32}
+        )
         self._orders = pd.DataFrame(
             columns=[
                 "datetime",
@@ -73,9 +80,9 @@ class Backtester(ccxt.Exchange):
             [
                 {
                     "asset": asset,
-                    "free": float(balance),
+                    "free": balance,
                     "used": 0.0,
-                    "total": float(balance),
+                    "total": balance,
                 }
                 for asset, balance in balances.items()
             ]
@@ -308,27 +315,28 @@ class Backtester(ccxt.Exchange):
             raise NameError(f"Data feed for '{symbol}' already exists.")
         self._data_feeds[symbol] = DataFeed(file_path, timeframe)
 
-    def deposit(self, asset: str, amount: float, id=None):
+    def deposit(self, asset: str, amount: float):
         """
         Deposit an asset to the backtesting exchange.
         """
         self._update_asset_balance(asset, "free", amount)
         self._update_asset_balance(asset, "total", amount)
 
-    def withdraw(self, asset: str, amount: float, id=None):
+    def withdraw(self, code: str, amount: float, params={}):
         """
         Withdraw an asset from the backtesting exchange.
+        :param str code: unified currency code which is the asset to withdraw
         """
-        free_balance = self._get_asset_balance(asset, "free")
+        free_balance = self._get_asset_balance(code, "free")
         if free_balance < amount:
             raise InsufficientFunds(
-                f"Insufficient balance. {asset} balance: {free_balance}"
+                f"Insufficient balance. {code} balance: {free_balance}"
             )
 
-        self._update_asset_balance(asset, "free", -amount)
-        self._update_asset_balance(asset, "total", -amount)
+        self._update_asset_balance(code, "free", -amount)
+        self._update_asset_balance(code, "total", -amount)
 
-    def fetch_balance(self):
+    def fetch_balance(self, params={}):
         """
         Fetch the balance of the backtesting exchange.
 
@@ -339,17 +347,17 @@ class Backtester(ccxt.Exchange):
     def create_order(
         self,
         symbol: str,
-        order_type: str,
-        side: str,
+        type: OrderType,
+        side: OrderSide,
         amount: float,
-        price: float = None,
-        params: dict = {},
+        price: float,
+        params={},
     ) -> any:
         """
         Creates a new order and adds it to the order book.
 
         :param symbol: The trading pair (e.g., "BTC/USDT").
-        :param order_type: The type of order (e.g., "limit", "market").
+        :param type: The type of order (e.g., "limit", "market").
         :param side: The order side ("buy" or "sell").
         :param amount: The amount of the base asset to trade.
         :param price: The price at which to place the order.
@@ -363,7 +371,7 @@ class Backtester(ccxt.Exchange):
                 "Invalid symbol format. Expected 'BASE/QUOTE' (e.g., 'BTC/USDT')."
             )
 
-        if order_type not in {"limit", "market"}:
+        if type not in {"limit", "market"}:
             raise BadRequest("Invalid order type. Expected 'limit' or 'market'.")
 
         if side not in {"buy", "sell"}:
@@ -376,7 +384,7 @@ class Backtester(ccxt.Exchange):
             raise BadRequest("Invalid price. Must be a positive number.")
         datafeed = self._data_feeds.get(symbol, None)
 
-        if datafeed and order_type == "limit":
+        if datafeed and type == "limit":
             [timestamp, open, high, low, close, volume] = self._data_feeds[
                 symbol
             ].get_data_at_timestamp(self.milliseconds())
@@ -386,15 +394,15 @@ class Backtester(ccxt.Exchange):
                         "The order would be filled immediately."
                     )
                 else:
-                    order_type = "market"
+                    type = "market"
             elif side == "sell" and price < open:
                 if params.get("postOnly", False):
                     raise OrderImmediatelyFillable(
                         "The order would be filled immediately."
                     )
                 else:
-                    order_type = "market"
-            if order_type == "market":
+                    type = "market"
+            if type == "market":
                 price = open
 
         # Calculate fee
@@ -430,7 +438,7 @@ class Backtester(ccxt.Exchange):
             "timestamp": self.milliseconds(),
             "lastTradeTimestamp": None,
             "symbol": symbol,
-            "type": order_type,
+            "type": type,
             "side": side,
             "price": price,
             "amount": amount,
