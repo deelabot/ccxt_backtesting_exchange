@@ -292,13 +292,74 @@ poetry run flake8
 poetry run mypy ccxt_backtesting_exchange/
 ```
 
-## Examples
+## Complete Example
 
-See the `examples/` directory for complete trading strategy examples:
+Here's a comprehensive example showing how to set up and run a backtest:
 
-- **Basic Strategy**: Simple buy/sell based on price thresholds
-- **Moving Average**: Trading signals from moving average crossovers
-- **Portfolio Management**: Multi-asset portfolio backtesting
+```python
+from datetime import datetime, timedelta, timezone
+from ccxt_backtesting_exchange import Backtester, Clock
+
+# Set up time range for backtesting
+start_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
+end_time = datetime(2024, 1, 2, tzinfo=timezone.utc)
+
+# Create clock for time simulation
+clock = Clock(
+    start_time=start_time,
+    end_time=end_time,
+    interval=timedelta(minutes=1)
+)
+
+# Initialize backtester with starting balances
+backtester = Backtester(
+    balances={
+        "BTC": 1.0,
+        "ETH": 10.0,
+        "USDT": 50000.0
+    },
+    clock=clock,
+    fee=0.001  # 0.1% trading fee
+)
+
+# Add market data feeds
+backtester.add_data_feed("BTC/USDT", "1m", "./data/btc_usdt_1m.json")
+backtester.add_data_feed("ETH/USDT", "1m", "./data/eth_usdt_1m.json")
+
+print("Starting backtest...")
+
+# Main backtesting loop
+while backtester.tick():
+    current_time = backtester.timestamp()
+    
+    # Get current market data
+    btc_ticker = backtester.fetch_ticker("BTC/USDT")
+    eth_ticker = backtester.fetch_ticker("ETH/USDT")
+    
+    # Get current balances
+    balance = backtester.fetch_balance()
+    
+    # Your trading logic here
+    if btc_ticker['last'] < 45000:  # Example: buy BTC if price is low
+        try:
+            order = backtester.create_order("BTC/USDT", "market", "buy", 0.01, btc_ticker['last'])
+            print(f"Bought BTC at {btc_ticker['last']}")
+        except Exception as e:
+            print(f"Buy failed: {e}")
+    
+    # Check and fill any pending orders
+    open_orders = backtester.fetch_open_orders("BTC/USDT")
+    if open_orders:
+        print(f"Open orders: {len(open_orders)}")
+
+print("Backtest completed!")
+
+# Print final results
+final_balance = backtester.fetch_balance()
+print("Final balances:")
+for asset, balance_info in final_balance.items():
+    print(f"  {asset}: {balance_info['total']:.6f}")
+```
 
 ## License
 
